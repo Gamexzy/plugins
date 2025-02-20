@@ -173,10 +173,10 @@
   // Defina suas paletas de tiles aqui!
   // Use os Tile IDs corretos do seu tileset "Calabouço".
   const tilePalettes = {
-    "chao_masmorra": [3216, 3217, 3218, 3219, 3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229, 3230, 3231, 3232, 3233, 3234, 3235, 3236, 3237, 3238, 3239, 3240, 3241, 3242, 3243, 3244, 3245, 3246, 3247, 3248, 3249, 3250, 3251, 3252, 3253, 3254, 3255, 3256, 3257, 3258, 3259, 3260, 3261, 3262, 3263, 2454, 2545, 2546, 2547, 2548, 2549, 2550, 2551, 2552, 2553, 2554, 2555, 2556, 2557, 2558, 2559, 2560, 2561, 2562, 2563, 2564, 2565, 2566, 2567, 2568, 2569, 2570, 2571, 2572, 2573, 2574, 2575, 2576, 2577, 2578, 2579, 2580, 2581, 2582, 2583, 2584, 2585, 2586, 2587, 2588, 2589, 2590, 2591], // Exemplo: Tiles de chão de pedra da masmorra
+    "chao_masmorra": [3216, 3217, 3218, 3219, 3220, 3221, 3222, 3223, 3224, 3225, 3226, 3227, 3228, 3229, 3230, 3231, 3232, 3233, 3234, 3235, 3236, 3237, 3238, 3239, 3240, 3241, 3242, 3243, 3244, 3245, 3246, 3247, 3248, 3249, 3250, 3251, 3252, 3253, 3254, 3255, 3256, 3257, 3258, 3259, 3260, 3261, 3262, 3263], // Exemplo: Tiles de chão de pedra da masmorra
     "parede_masmorra": [5959, 6331],         // Exemplo: Tiles de parede de pedra da masmorra
     "detalhe_masmorra": [3264, 3265, 3266, 3267],   // Exemplo: Tiles de detalhes de masmorra (rochas, etc.)
-    "agua_masmorra": [2528, 2575],     // Exemplo: Tiles de água da masmorra
+    "agua_masmorra": [2528, 2529, 2530, 2531, 2532, 2533, 2534, 2535, 2536, 2537, 2538, 2539, 2540, 2541, 2542, 2543, 2544, 2545, 2546, 2547, 2548, 2549, 2550, 2551, 2552, 2553, 2554, 2555, 2556, 2557, 2558, 2559, 2560, 2561, 2562, 2563, 2564, 2565, 2566, 2567, 2568, 2569, 2570, 2571, 2572, 2573, 2574, 2575],     // Exemplo: Tiles de água da masmorra
     // Adicione mais paletas para outros tipos de ambiente, se quiser!
     // Exemplo: "grama_floresta": [ ...lista de IDs de tiles de grama e terra... ],
     //          "agua_rio": [ ...lista de IDs de tiles de água e margem... ],
