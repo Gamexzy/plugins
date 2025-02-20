@@ -99,14 +99,14 @@
     const parameters = PluginManager.parameters(pluginName);
     const cadeiaMarkovTreinadaJSON_FIXA = parameters['cadeiaMarkovTreinadaJSON_FIXA'];
 
-    let markovChain = {
+    let markovChain = {    // Variável para armazenar a cadeia de Markov
       "2816":
         { "2816": 26951, 
           "2864": 639 },
       "2864":
         { "2816": 651, 
          "2864": 1502 }
-    }; // Variável para armazenar a cadeia de Markov
+    }; 
 
     try {
         markovChain = JSON.parse(cadeiaMarkovTreinadaJSON_FIXA); // Tenta parsear o JSON
