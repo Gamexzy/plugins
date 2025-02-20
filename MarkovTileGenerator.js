@@ -109,7 +109,14 @@
 
   // ** CADEIA DE MARKOV TREINADA EMBUTIDA NO PLUGIN (JSON STRING) -  SUBSTITUA COM SEU JSON TREINADO! **
   const cadeiaMarkovTreinadaJSON_FIXA = `{
-
+  "2816": {
+    "2816": 26951,
+    "2864": 639
+  },
+  "2864": {
+    "2816": 651,
+    "2864": 1502
+  }
   }`;
 
   // ** Variável para armazenar a cadeia de Markov (agora carregada do JSON fixo) **
