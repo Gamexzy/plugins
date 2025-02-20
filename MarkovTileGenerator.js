@@ -293,6 +293,17 @@
 
           console.log("Mapa Markov aplicado ao mapa atual! (Camada Base)"); // DEBUG - Mapa Aplicado
           alert("Mapa Markov Gerado e aplicado ao mapa atual! (Camada Base)"); // Alerta de conclusão
+
+                alert("Mapa Markov Gerado e aplicado ao mapa atual! (Camada Base)"); // Alerta de conclusão
+
+        // ** 4. SALVAR O MAPA GERADO NOS DADOS DO JOGO SALVO **
+        $gameMap._data = novoMapaData; // ** Substitui os dados do mapa atual pelos dados gerados **
+        $gameMap.setup($gameMap.mapId()); // ** Refaz a configuração do mapa para aplicar as mudanças **
+
+        // ** 5. SOLICITAR SALVAMENTO DO JOGO (opcional, mas recomendado para persistência imediata) **
+        DataManager.saveGame(0); // ** Salva no slot de salvamento 0 (pode ser ajustado/parametrizado) **
+        console.log("Mapa Markov SALVO nos dados do jogo! (Slot 0)"); // Mensagem de confirmação no console
+        alert("Mapa Markov gerado e SALVO com sucesso! O mapa será persistido mesmo após sair do jogo."); // Feedback para o usuário (pode ser removido em jogo final)
       };
 
       gerarMapaMarkov(); // Chama a função para gerar e aplicar o mapa
