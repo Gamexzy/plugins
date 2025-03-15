@@ -1,50 +1,50 @@
 /*:pt
- * @target MZ
- * @plugindesc Salva mapas Markov gerados nos saves do jogo. (ONMAPLOADED)
- * @author Gemini
- * @help Este plugin estende o Gerador de Mapas Markov para salvar os mapas
- * gerados nos saves do jogo, garantindo persistência.
- *
- * Comando Plugin: GerarMapaMarkov largura altura camadaBase
- *
- * Para usar, chame o comando de plugin "GerarMapaMarkov" para agendar
- * a geração e aplicação de um mapa Markov APÓS o mapa ser carregado.
- * O mapa gerado será salvo automaticamente com o jogo.
- *
- * ATENÇÃO: Este plugin MODIFICA o sistema de salvamento do RPG Maker MZ.
- *     Use com cuidado e faça backup do seu projeto antes de usar.
- *
- * @param cadeiaMarkovTreinadaJSON_FIXA
- * @type text
- * @desc JSON contendo a cadeia de Markov treinada (formato fixo).
- *     Certifique-se de que o JSON esteja no formato correto!
- * @default {"2048":{"2048":100},"2049":{"2049":100}}
- *
- * @command GerarMapaMarkov
- * @text Gerar Mapa Markov (OnMapLoaded)
- * @desc Agenda a geração e aplicação de um mapa Markov no próximo mapa carregado.
- * @arg largura
- * @type number
- * @min 1
- * @max 100
- * @default 20
- * @text Largura do Mapa
- * @desc Largura do mapa Markov a ser gerado (em tiles).
- * @arg altura
- * @type number
- * @min 1
- * @max 100
- * @default 15
- * @text Altura do Mapa
- * @desc Altura do mapa Markov a ser gerado (em tiles).
- * @arg camadaBase
- * @type number
- * @min 0
- * @max 2
- * @default 0
- * @text Camada Base
- * @desc Camada do mapa onde o mapa Markov será aplicado (0=Inferior, 1=Superior, 2=Sombra).
- */
+* @target MZ
+* @plugindesc Salva mapas Markov gerados nos saves do jogo. (ONMAPLOADED)
+* @author Gemini
+* @help Este plugin estende o Gerador de Mapas Markov para salvar os mapas
+* gerados nos saves do jogo, garantindo persistência.
+*
+* Comando Plugin: GerarMapaMarkov largura altura camadaBase
+*
+* Para usar, chame o comando de plugin "GerarMapaMarkov" para agendar
+* a geração e aplicação de um mapa Markov APÓS o mapa ser carregado.
+* O mapa gerado será salvo automaticamente com o jogo.
+*
+* ATENÇÃO: Este plugin MODIFICA o sistema de salvamento do RPG Maker MZ.
+*     Use com cuidado e faça backup do seu projeto antes de usar.
+*
+* @param cadeiaMarkovTreinadaJSON_FIXA
+* @type text
+* @desc JSON contendo a cadeia de Markov treinada (formato fixo).
+*     Certifique-se de que o JSON esteja no formato correto!
+* @default {"2048":{"2048":100},"2049":{"2049":100}}
+*
+* @command GerarMapaMarkov
+* @text Gerar Mapa Markov (OnMapLoaded)
+* @desc Agenda a geração e aplicação de um mapa Markov no próximo mapa carregado.
+* @arg largura
+* @type number
+* @min 1
+* @max 100
+* @default 20
+* @text Largura do Mapa
+* @desc Largura do mapa Markov a ser gerado (em tiles).
+* @arg altura
+* @type number
+* @min 1
+* @max 100
+* @default 15
+* @text Altura do Mapa
+* @desc Altura do mapa Markov a ser gerado (em tiles).
+* @arg camadaBase
+* @type number
+* @min 0
+* @max 2
+* @default 0
+* @text Camada Base
+* @desc Camada do mapa onde o mapa Markov será aplicado (0=Inferior, 1=Superior, 2=Sombra).
+*/
 (() => {
     const pluginName = 'MarkovTileGenerator'; // Nome ÚNICO para o plugin
 
@@ -169,7 +169,7 @@ Scene_Map.prototype.gerarEAplicarMapaMarkov = function(args) { // **NOVA funçã
     console.log("Cadeia de Markov (antes da geração):");
     console.log(markovChain);
 
-    const mapaGeradoData = gerarMapaMarkov(largura, altura, markovChain);
+    const mapaGeradoData = gerarMapaMarkov(largura, altura, markovChain); // **CHAMA A FUNÇÃO gerarMapaMarkov CORRIGIDA**
     console.log("Mapa Markov Gerado (TileIds):");
     console.log(mapaGeradoData);
 
@@ -177,6 +177,97 @@ Scene_Map.prototype.gerarEAplicarMapaMarkov = function(args) { // **NOVA funçã
     console.log("Mapa Markov aplicado ao mapa atual! (Camada Base)");
 
     console.log("[gerarEAplicarMapaMarkov] Geração e aplicação do mapa Markov CONCLUÍDA."); // Log de fim da função
+};
+
+// *** FUNÇÃO gerarMapaMarkov COM A LÓGICA DE 8 VIZINHOS ***
+function gerarMapaMarkov(largura, altura, markovChain) {
+    console.log("[gerarMapaMarkov] Função gerarMapaMarkov CHAMADA! (com 8 vizinhos)"); // Log para verificar se a função está sendo chamada
+    console.log("[gerarMapaMarkov] Largura:", largura, "Altura:", altura, "Cadeia Markov:", markovChain);
+
+    const novoMapaData = []; // Array para armazenar os TileIds do novo mapa
+
+     // ** 1. Escolher um Tile inicial ALEATÓRIO da cadeia de Markov **
+    const tileIdsDisponiveis = Object.keys(markovChain); // Obtém um array de todos os TileIds na cadeia
+    if (tileIdsDisponiveis.length === 0) {
+        console.warn("Aviso: Cadeia de Markov vazia. Não é possível gerar mapa.");
+        alert("Aviso: Cadeia de Markov vazia. Treine a cadeia primeiro.");
+        return; // Sai da função se a cadeia estiver vazia
+    }
+    const indiceTileInicialAleatorio = Math.floor(Math.random() * tileIdsDisponiveis.length); // Escolhe um índice aleatório
+    const tileInicial = tileIdsDisponiveis[indiceTileInicialAleatorio]; // Pega o TileId correspondente ao índice aleatório
+    let tileAnterior = parseInt(tileInicial, 10);
+
+    console.log("DEBUG - Tile inicial para geração (ALEATÓRIO):", tileInicial, "(TileId Number:", tileAnterior, ")"); // DEBUG - Tile Inicial Aleatório
+      // ** 2. Gerar o mapa iterando por linhas e colunas **
+    for (let y = 0; y < altura; y++) {
+        let tileAcima = null;             // N
+        let tileEsquerdaAcima = null;      // NW
+        let tileDireitaAcima = null;       // NE
+        let tileAbaixo = null;            // S  (Na verdade, será da linha anterior, diagonal inferior esquerdo)
+        let tileEsquerdaAbaixo = null;     // SW (Na verdade, será da linha anterior, diagonal inferior esquerdo)
+        let tileDireitaAbaixo = null;      // SE (Na verdade, será da linha anterior, diagonal inferior direito)
+
+
+        for (let x = 0; x < largura; x++) {
+            let proximoTileId;
+
+            // ** Lógica de Transição Markov APRIMORADA (8 Vizinhos) **
+            let transicoesPossiveis = {}; // Objeto para armazenar transições combinadas
+
+            // ** Vizinho ESQUERDA (W - Horizontal Anterior) **
+            if (markovChain[tileAnterior]) {
+                Object.assign(transicoesPossiveis, markovChain[tileAnterior]);
+            }
+            // ** Vizinho ACIMA (N - Vertical Superior) **
+            if (y > 0 && tileAcima !== null && markovChain[tileAcima]) {
+                Object.assign(transicoesPossiveis, markovChain[tileAcima]);
+            }
+            // ** Vizinho ESQUERDA-ACIMA (NW - Diagonal Superior Esquerda) **
+            if (y > 0 && x > 0 && tileEsquerdaAcima !== null && markovChain[tileEsquerdaAcima]) {
+                Object.assign(transicoesPossiveis, markovChain[tileEsquerdaAcima]);
+            }
+            // ** Vizinho DIREITA-ACIMA (NE - Diagonal Superior Direita) **
+            if (y > 0 && x < largura - 1 && tileDireitaAcima !== null && tileDireitaAcima !== undefined && markovChain[tileDireitaAcima]) {
+                Object.assign(transicoesPossiveis, markovChain[tileDireitaAcima]);
+            }
+             // ** Vizinho ESQUERDA-ABAIXO (SW - Diagonal Inferior Esquerda -  LINHA ANTERIOR!) **
+            if (y > 0 && x > 0 && tileEsquerdaAbaixo !== null && markovChain[tileEsquerdaAbaixo]) {
+                Object.assign(transicoesPossiveis, markovChain[tileEsquerdaAbaixo]);
+            }
+            // ** Vizinho DIREITA-ABAIXO (SE - Diagonal Inferior Direita - LINHA ANTERIOR!) **
+            if (y > 0 && x < largura - 1 && tileDireitaAbaixo !== null && tileDireitaAbaixo !== undefined && markovChain[tileDireitaAbaixo]) {
+                Object.assign(transicoesPossiveis, markovChain[tileDireitaAbaixo]);
+            }
+
+
+            if (Object.keys(transicoesPossiveis).length > 0) {
+                // ** Se houver transições combinadas, escolhe um tile aleatório entre elas **
+                const tilesVizinhos = Object.keys(transicoesPossiveis);
+                const proximoTileIdStr = tilesVizinhos[Math.floor(Math.random() * tilesVizinhos.length)];
+                proximoTileId = parseInt(proximoTileIdStr, 10);
+            } else {
+                // ** Se não houver transições para nenhum dos vizinhos, usa o Tile padrão **
+                proximoTileId = 2048;
+                console.warn(`Aviso: Sem transições para vizinhos em x=${x}, y=${y}. Usando Tile padrão ${proximoTileId}. Tile Anterior (W): ${tileAnterior}, Tile Acima (N): ${tileAcima}, Tile EsqAcima (NW): ${tileEsquerdaAcima}, Tile DirAcima (NE): ${tileDireitaAcima}, Tile EsqAbaixo (SW): ${tileEsquerdaAbaixo}, Tile DirAbaixo (SE): ${tileDireitaAbaixo}`);
+            }
+
+            novoMapaData.push(proximoTileId);
+
+            // ** Atualiza os tiles de referência para a PRÓXIMA iteração **
+            tileDireitaAbaixo = tileDireitaAcima; // SE = NE (Linha anterior)
+            tileEsquerdaAbaixo = tileEsquerdaAcima; // SW = NW (Linha anterior)
+            tileDireitaAcima = tileAcima;      // NE = N  (Linha anterior)
+            tileEsquerdaAcima = tileAnterior;   // NW = W  (Linha atual)
+            tileAcima = proximoTileId;         // N = Tile atual
+            tileAnterior = proximoTileId;       // W = Tile atual
+
+
+            console.log(`DEBUG - Gerando Tile: x=${x}, y=${y}, TileId=${proximoTileId}, Tile Anterior (W)=${tileAnterior}, Tile Acima (N)=${tileAcima}, Tile EsqAcima (NW)=${tileEsquerdaAcima}, Tile DirAcima (NE)=${tileDireitaAcima}, Tile EsqAbaixo (SW)=${tileEsquerdaAbaixo}, Tile DirAbaixo (SE)=${tileDireitaAbaixo}`); // DEBUG - Tile Gerado (com 8 vizinhos)
+        }
+    }
+
+    console.log("Mapa Markov Gerado (TileIds):\n", novoMapaData); // Exibe os TileIds gerados no console
+    return novoMapaData; // ** Retorna novoMapaData para fora da função gerarMapaMarkov() **
 };
 
 
@@ -212,7 +303,7 @@ function aplicarMapa(mapaGeradoData, largura, altura, camadaBase) {
     for (let y = 0; y < altura; y++) {
         for (let x = 0; x < largura; x++) {
             // **NOVO: Tile ID Simples para teste - usar tile IDs 0-4**
-            const tileId = (2048 + y) % 5; // Usar tile IDs simples 0, 1, 2, 3, 4
+            const tileId = mapaGeradoData[y * largura + x]; // **USA O TILE ID DO MAPA GERADO!**
 
             // **NOVO: Cálculo dataIndex simplificado para teste - assumindo camada base 0**
             const dataIndex = (y * $gameMap.width() + x) * 4 + camadaBase; // Manter original por enquanto, mas simplificar depois se necessário
