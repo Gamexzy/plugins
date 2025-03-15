@@ -247,7 +247,7 @@ function gerarMapaMarkov(largura, altura, markovChain) {
                 proximoTileId = parseInt(proximoTileIdStr, 10);
             } else {
                 // ** Se não houver transições para nenhum dos vizinhos, usa o Tile padrão **
-                proximoTileId = 2048;
+                proximoTileId = 2816;
                 console.warn(`Aviso: Sem transições para vizinhos em x=${x}, y=${y}. Usando Tile padrão ${proximoTileId}. Tile Anterior (W): ${tileAnterior}, Tile Acima (N): ${tileAcima}, Tile EsqAcima (NW): ${tileEsquerdaAcima}, Tile DirAcima (NE): ${tileDireitaAcima}, Tile EsqAbaixo (SW): ${tileEsquerdaAbaixo}, Tile DirAbaixo (SE): ${tileDireitaAbaixo}`);
             }
 
