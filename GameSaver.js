@@ -1,254 +1,220 @@
 /*:
 * @target MZ
-* @plugindesc Fornece funcionalidade para salvar e carregar alterações de tile em jogos salvos.
+* @plugindesc Fornece funcionalidade para salvar e carregar alterações de tile e dados base de chunks, suportando coordenadas de chunk reais para mapas em looping.
 * @author [Seu Nome Aqui]
-* @version 1.1.2 // Versão incrementada para refletir a adição do reset
+* @version 1.4.0 // Versão: Adicionado parâmetro de Modo de Depuração e padronização global.
 * @license MIT
 * @help
-* ============================================================================
+* ============================================================================\
 * Introdução
-* ============================================================================
-* Este plugin fornece funções para salvar e carregar as alterações feitas nos
-* tiles do mapa. Outros plugins que modificam os tiles podem usar esta
-* funcionalidade para garantir que as modificações de tile sejam persistidas ao salvar
-* e carregar o jogo.
+* ============================================================================\
+* Este plugin armazena alterações feitas nos tiles do mapa por jogador/eventos
+* e o estado base gerado dos chunks. Ele usa coordenadas de chunk "reais"
+* para garantir que as modificações e a geração persistam em mapas com scroll
+* tipo loop. **Agora também salva o estado de rastreamento de coordenadas do BasicChunkGenerator.**
 *
-* ============================================================================
+* ============================================================================\
 * Instruções
-* ============================================================================
+* ============================================================================\
 * 1. Adicione este plugin ao seu projeto no RPG Maker MZ. Certifique-se de que
-* ele esteja posicionado ANTES de qualquer outro plugin que dependa dele para
-* salvar ou carregar alterações de tile.
-* 2. Outros plugins podem acessar as funções de salvamento e carregamento
-* através do objeto global `window.TileChangeSaver`.
+* ele esteja posicionado ANTES de BasicChunkGenerator.js.
+* 2. BasicChunkGenerator.js e WorldGenerationCoordinator.js chamarão
+* as funções save/load com coordenadas de chunk reais.
 *
-* ============================================================================
-* Funções Disponíveis para Outros Plugins:
-* ============================================================================
-* window.TileChangeSaver.getSavedTileChanges():
-* Retorna o objeto contendo as alterações de tile salvas.
+* ============================================================================\
+* Funções Disponíveis para Outros Plugins (Principalmente BasicChunkGenerator):
+* ============================================================================\
+* globalThis.GameSaver.saveTileChanges(mapId, chunkXReal, chunkYReal, changeList): Salva alterações de tile para um chunk real.
+* globalThis.GameSaver.loadTileChanges(mapId, chunkXReal, chunkYReal): Carrega alterações de tile para um chunk real.
+* globalThis.GameSaver.saveChunkBaseData(mapId, chunkXReal, chunkYReal, chunkDataList): Salva estado base gerado para um chunk real.
+* globalThis.GameSaver.loadChunkBaseData(mapId, chunkXReal, chunkYReal): Carrega estado base gerado para um chunk real.
+* globalThis.GameSaver.registerTileChangeReal(mapId, xGlobalReal, yGlobalReal, layer, newTileId): Registra alteração de tile com coordenadas reais.
+* globalThis.GameSaver.saveBasicChunkGeneratorState(state): Salva o estado interno do BasicChunkGenerator.
+* globalThis.GameSaver.loadBasicChunkGeneratorState(): Carrega o estado interno do BasicChunkGenerator.
 *
-* window.TileChangeSaver.setSavedTileChanges(data):
-* Define o objeto contendo as alterações de tile a serem salvas.
-* `data` deve ser um objeto onde as chaves são IDs de mapa e os valores
-* são objetos de chunks, que contêm arrays de objetos com as
-* propriedades `x`, `y`, `tileId`, e `layer`.
+* @param debugMode
+* @text Modo de Depuração
+* @type boolean
+* @on SIM
+* @off NÃO
+* @desc Ativa logs detalhados no console para depuração.
+* @default false
 *
-* window.TileChangeSaver.applySavedTileChanges():
-* Aplica as alterações de tile salvas ao mapa atual quando ele é carregado.
-*
-* window.TileChangeSaver.saveTileChanges(mapId, startX, startY, width, height):
-* Salva o estado atual dos tiles dentro de um chunk específico do mapa.
-*
-* window.TileChangeSaver.loadTileChanges(mapId, startX, startY, width, height):
-* Carrega (aplica) as alterações de tile salvas para um chunk específico do mapa.
-*
-* ============================================================================
-* Notas
-* ============================================================================
-* - Este plugin MODIFICA o sistema de salvamento do RPG Maker MZ. Use com
-* cuidado e faça backup do seu projeto antes de usar.
-* - Certifique-se de que este plugin esteja ativado no gerenciador de plugins.
-*
-* ============================================================================
-* Fim da Ajuda
-* ============================================================================
+* ============================================================================\
 */
 
 (() => {
-    // const pluginName = "GameSaver"; // Removido pois não é mais usado sem logs
-    let _savedGameData = {
-        tileChanges: {},
-        proceduralEvents: {} // Usaremos isso para todos os eventos procedurais (incluindo personagens)
-    };
+    const pluginName = "GameSaver";
+    const parameters = PluginManager.parameters(pluginName);
 
-    window.GameSaver = {
-        getSavedData: () => {
-            return _savedGameData;
-        },
-        setSavedData: (data) => {
-            _savedGameData = data || { tileChanges: {}, eventData: {}, characterData: {} };
-        },
-        applySavedData: () => {
-            window.GameSaver.applySavedTileChanges();
-            window.GameSaver.applySavedProceduralEvents(); // Chamada para aplicar eventos procedurais salvos
-            // Aplicação de eventos virá depois
-        },
-        saveTileChanges: (mapId, startX, startY, width, height) => {
-            if (!$gameMap || !$dataMap || !$dataMap.data || typeof globalThis.chunkWidth === 'undefined' || typeof globalThis.chunkHeight === 'undefined') {
-                return;
-            }
-            const mapWidth = $dataMap.width;
-            const mapHeight = $dataMap.height;
-            const chunkX = Math.floor(startX / globalThis.chunkWidth);
-            const chunkY = Math.floor(startY / globalThis.chunkHeight);
-            const chunkKey = `${chunkX},${chunkY}`;
+    const debugMode = String(parameters['debugMode'] || 'false') === 'true'; // Novo parâmetro
 
-            if (!_savedGameData.tileChanges[mapId]) {
-                _savedGameData.tileChanges[mapId] = {};
-            }
+    let _tileChanges = {};
+    let _chunkBaseData = {};
+    let _bcgState = null;
 
-            const changesForMap = _savedGameData.tileChanges[mapId];
-            const changesForChunk = [];
+    const SAVE_KEY_DATA = 'proceduralChunkData';
 
-            for (let y = startY; y < startY + height; y++) {
-                for (let x = startX; x < startX + width; x++) {
-                    if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-                        for (let layer = 0; layer < 4; layer++) {
-                            const currentTileId = $gameMap.tileId(x, y, layer);
-                            changesForChunk.push({ x: x, y: y, tileId: currentTileId, layer: layer });
-                        }
-                    }
-                }
-            }
 
-            changesForMap[chunkKey] = changesForChunk;
-        },
-        loadTileChanges: (mapId, startX, startY, width, height) => {
-            if (!_savedGameData.tileChanges[mapId]) {
-                return null;
-            }
-            if (!$gameMap || !$dataMap || !$dataMap.data || typeof globalThis.chunkWidth === 'undefined' || typeof globalThis.chunkHeight === 'undefined') {
-                return null;
-            }
-
-            const mapWidth = $dataMap.width;
-            const mapHeight = $dataMap.height;
-            const chunkX = Math.floor(startX / globalThis.chunkWidth);
-            const chunkY = Math.floor(startY / globalThis.chunkHeight);
-            const chunkKey = `${chunkX},${chunkY}`;
-            const changesForMap = _savedGameData.tileChanges[mapId];
-            let tilesLoadedCount = 0;
-            const loadedChanges = [];
-
-            if (changesForMap && changesForMap[chunkKey]) {
-                const changesInChunk = changesForMap[chunkKey];
-                changesInChunk.forEach(change => {
-                    if (change.x >= 0 && change.x < mapWidth && change.y >= 0 && change.y < mapHeight && change.layer >= 0 && change.layer < 4) {
-                        const index = change.layer * mapWidth * mapHeight + change.y * mapWidth + change.x;
-                        $dataMap.data[index] = change.tileId;
-                        tilesLoadedCount++;
-                        loadedChanges.push(change);
-                    }
-                });
-
-                if (tilesLoadedCount > 0) {
-                    $gameMap.requestRefresh();
-                }
-            }
-            return loadedChanges; // Retorna as alterações carregadas
-        },
-        saveProceduralEventData: (mapId, chunkX, chunkY, events) => {
-            if (!_savedGameData.proceduralEvents[mapId]) {
-                _savedGameData.proceduralEvents[mapId] = {};
-            }
-            const chunkKey = `${chunkX},${chunkY}`;
-            const eventDataToSave = events.map(event => ({
-                eventId: event.eventId, // ID do evento na base de dados ($dataMap.events)
-                xInChunk: event.x - (chunkX * globalThis.chunkWidth), // Posição X relativa ao chunk
-                yInChunk: event.y - (chunkY * globalThis.chunkHeight)
-                // Podemos adicionar mais propriedades aqui se necessário
-            }));
-            _savedGameData.proceduralEvents[mapId][chunkKey] = eventDataToSave;
-        },
-        loadProceduralEventData: (mapId, chunkX, chunkY) => {
-            if (!_savedGameData.proceduralEvents[mapId]) {
-                return null;
-            }
-            const chunkKey = `${chunkX},${chunkY}`;
-            return _savedGameData.proceduralEvents[mapId][chunkKey] || null;
-        },
-        applySavedTileChanges: () => {
-            const mapId = $gameMap.mapId();
-            if (_savedGameData.tileChanges[mapId] && $gameMap && $dataMap && $dataMap.data) {
-                const mapChanges = _savedGameData.tileChanges[mapId];
-                const width = $dataMap.width;
-                const height = $dataMap.height;
-                let changesApplied = 0;
-
-                for (const chunkKey in mapChanges) {
-                    if (mapChanges.hasOwnProperty(chunkKey)) {
-                        const changesInChunk = mapChanges[chunkKey];
-                        changesInChunk.forEach(change => {
-                            if (change.x >= 0 && change.x < width && change.y >= 0 && change.y < height && change.layer >= 0 && change.layer < 4) {
-                                const index = change.layer * width * height + change.y * width + change.x;
-                                $dataMap.data[index] = change.tileId;
-                                changesApplied++;
-                            }
-                        });
-                    }
-                }
-            }
-        },
-        applySavedProceduralEvents: () => {
-            const mapId = $gameMap.mapId();
-            if (_savedGameData.proceduralEvents[mapId] && $gameMap) {
-                for (const chunkKey in _savedGameData.proceduralEvents[mapId]) {
-                    if (_savedGameData.proceduralEvents[mapId].hasOwnProperty(chunkKey)) {
-                        const [chunkXStr, chunkYStr] = chunkKey.split(',');
-                        const chunkX = parseInt(chunkXStr);
-                        const chunkY = parseInt(chunkYStr);
-                        const eventsInChunk = _savedGameData.proceduralEvents[mapId][chunkKey];
-                        const startX = chunkX * globalThis.chunkWidth;
-                        const startY = chunkY * globalThis.chunkHeight;
-
-                        eventsInChunk.forEach(eventData => {
-                            let eventX = startX + eventData.xInChunk;
-                            let eventY = startY + eventData.yInChunk;
-                            let newEventId = $gameMap._events.length > 0 ? Math.max(...$gameMap._events.map(e => e ? e._eventId : 0)) + 1 : 1; // Simple way to get a new event ID
-
-                            if (eventData.eventId) {
-                                const originalEventData = $dataMap.events[eventData.eventId];
-                                if (originalEventData) {
-                                    const newEvent = new Game_Event($gameMap.mapId(), newEventId);
-                                    newEvent.setPosition(eventX, eventY);
-                                    newEvent.copyFrom(originalEventData); // Copia as propriedades do evento original
-                                    $gameMap._events[newEventId] = newEvent;
-                                } else {
-                                    console.warn(`Evento com ID ${eventData.eventId} não encontrado na base de dados.`);
-                                }
-                            }
-                        });
-                    }
-                }
-                $gameMap.requestRefresh(); // Solicita um refresh do mapa para mostrar os novos eventos
-            }
-        },
-        resetSavedData: () => { // Adicionamos a função para resetar os dados
-            _savedGameData = { tileChanges: {}, proceduralEvents: {} };
-        }
-    };
-
-    // --- Integração com o Sistema de Save/Load ---
+    // --- Integração com o Sistema de Save/Load do RMMZ ---
 
     const _DataManager_makeSaveContents = DataManager.makeSaveContents;
     DataManager.makeSaveContents = function() {
         const contents = _DataManager_makeSaveContents.call(this);
-        contents.gameSaverData = JSON.parse(JSON.stringify(window.GameSaver.getSavedData()));
+        contents[SAVE_KEY_DATA] = {
+            tileChanges: _tileChanges,
+            chunkBaseData: _chunkBaseData,
+            basicChunkGeneratorState: _bcgState
+        };
+        if (debugMode) console.log(`${pluginName}: Dados de save (alterações de tile, base de chunk, BCG State) preparados.`);
         return contents;
     };
 
     const _DataManager_extractSaveContents = DataManager.extractSaveContents;
     DataManager.extractSaveContents = function(contents) {
         _DataManager_extractSaveContents.call(this, contents);
-        if (contents.gameSaverData) {
-            window.GameSaver.setSavedData(JSON.parse(JSON.stringify(contents.gameSaverData)));
+        if (contents[SAVE_KEY_DATA]) {
+            _tileChanges = contents[SAVE_KEY_DATA].tileChanges || {};
+            _chunkBaseData = contents[SAVE_KEY_DATA].chunkBaseData || {};
+            _bcgState = contents[SAVE_KEY_DATA].basicChunkGeneratorState || null;
+            if (debugMode) console.log(`${pluginName}: Dados de save (alterações de tile, base de chunk, BCG State) carregados.`);
         } else {
-            window.GameSaver.setSavedData({ tileChanges: {}, eventData: {}, characterData: {} });
+            _tileChanges = {};
+            _chunkBaseData = {};
+            _bcgState = null;
+            if (debugMode) console.log(`${pluginName}: Nenhum dado de save encontrado para chunks/BCG. Inicializando.`);
         }
     };
 
-    const _Scene_Map_start = Scene_Map.prototype.start;
-    Scene_Map.prototype.start = function() {
-        _Scene_Map_start.call(this);
-        window.GameSaver.applySavedData();
+    const _Game_System_initialize = Game_System.prototype.initialize;
+    Game_System.prototype.initialize = function() {
+        _Game_System_initialize.call(this);
+        _tileChanges = {};
+        _chunkBaseData = {};
+        _bcgState = null;
+        if (debugMode) console.log(`${pluginName}: Dados de save de chunks/BCG inicializados para novo jogo.`);
     };
 
-    // Hook na função de novo jogo para resetar os dados do GameSaver
-    const _DataManager_setupNewGame = DataManager.setupNewGame;
-    DataManager.setupNewGame = function() {
-        _DataManager_setupNewGame.call(this);
-        window.GameSaver.resetSavedData();
+
+    // --- Funções de Salvar e Carregar Chamadas pelo BasicChunkGenerator ---
+
+    const GameSaver = {}; // Objeto local para as funções antes de expor
+
+    GameSaver.saveTileChanges = function(mapId, chunkXReal, chunkYReal, changeList) {
+        const chunkKey = `${chunkXReal},${chunkYReal}`;
+        const mapKey = mapId;
+
+        if (!_tileChanges[mapKey]) {
+            _tileChanges[mapKey] = {};
+        }
+
+        if (changeList && changeList.length > 0) {
+            _tileChanges[mapKey][chunkKey] = changeList;
+            if (debugMode) console.log(`${pluginName}: Salvando ${changeList.length} alterações para chunk real (${chunkXReal},${chunkYReal}).`);
+        } else {
+            if (_tileChanges[mapKey]) {
+                delete _tileChanges[mapKey][chunkKey];
+                if (debugMode) console.log(`${pluginName}: Removendo entrada de alterações vazias para chunk real (${chunkXReal},${chunkYReal}).`);
+            }
+        }
     };
 
+    GameSaver.loadTileChanges = function(mapId, chunkXReal, chunkYReal) {
+        const chunkKey = `${chunkXReal},${chunkYReal}`;
+        const mapKey = mapId;
+
+        if (_tileChanges[mapKey] && _tileChanges[mapKey][chunkKey]) {
+            if (debugMode) console.log(`${pluginName}: Carregando ${_tileChanges[mapKey][chunkKey].length} alterações para chunk real (${chunkXReal},${chunkYReal}).`);
+            return _tileChanges[mapKey][chunkKey];
+        } else {
+            return [];
+        }
+    };
+
+    GameSaver.saveChunkBaseData = function(mapId, chunkXReal, chunkYReal, chunkDataList) {
+        const chunkKey = `${chunkXReal},${chunkYReal}`;
+        const mapKey = mapId;
+
+        if (!_chunkBaseData[mapKey]) {
+            _chunkBaseData[mapKey] = {};
+        }
+
+        if (chunkDataList && chunkDataList.length > 0) {
+            _chunkBaseData[mapKey][chunkKey] = chunkDataList;
+            if (debugMode) console.log(`${pluginName}: Salvando ${chunkDataList.length} tiles como base para chunk real (${chunkXReal},${chunkYReal}).`);
+        } else {
+            if (_chunkBaseData[mapKey]) {
+                delete _chunkBaseData[mapKey][chunkKey];
+                if (debugMode) console.log(`${pluginName}: Removendo entrada de dados base vazia para chunk real (${chunkXReal},${chunkYReal}).`);
+            }
+        }
+    };
+
+    GameSaver.loadChunkBaseData = function(mapId, chunkXReal, chunkYReal) {
+        const chunkKey = `${chunkXReal},${chunkYReal}`;
+        const mapKey = mapId;
+
+        if (_chunkBaseData[mapKey] && _chunkBaseData[mapKey][chunkKey]) {
+            if (debugMode) console.log(`${pluginName}: Carregando dados base para chunk real (${chunkXReal},${chunkYReal}).`);
+            return _chunkBaseData[mapKey][chunkKey];
+        } else {
+            return null;
+        }
+    };
+
+    GameSaver.registerTileChangeReal = function(mapId, xGlobalReal, yGlobalReal, layer, newTileId) {
+        const chunkWidth = globalThis.chunkWidth !== undefined ? globalThis.chunkWidth : 16;
+        const chunkHeight = globalThis.chunkHeight !== undefined ? globalThis.chunkHeight : 16;
+
+        const chunkXReal = Math.floor(xGlobalReal / chunkWidth);
+        const chunkYReal = Math.floor(yGlobalReal / chunkHeight);
+
+        const chunkKey = `${chunkXReal},${chunkYReal}`;
+        const mapKey = mapId;
+
+        const xLocal = (xGlobalReal % chunkWidth + chunkWidth) % chunkWidth;
+        const yLocal = (yGlobalReal % chunkHeight + chunkHeight) % chunkHeight;
+
+        if (!_tileChanges[mapKey]) {
+            _tileChanges[mapKey] = {};
+        }
+        if (!_tileChanges[mapKey][chunkKey]) {
+            _tileChanges[mapKey][chunkKey] = [];
+        }
+
+        _tileChanges[mapKey][chunkKey] = _tileChanges[mapKey][chunkKey].filter(change =>
+            !(change.xLocal === xLocal && change.yLocal === yLocal && change.layer === layer)
+        );
+
+        _tileChanges[mapKey][chunkKey].push({
+            xLocal: xLocal,
+            yLocal: yLocal,
+            layer: layer,
+            tileId: newTileId
+        });
+
+        if (globalThis.BasicChunkGenerator && globalThis.BasicChunkGenerator._modifiedChunks) {
+            globalThis.BasicChunkGenerator._modifiedChunks.add(chunkKey);
+        } else {
+            if (debugMode) console.warn(`${pluginName}: BasicChunkGenerator ou _modifiedChunks não acessível. A alteração pode não ser marcada como modificada.`);
+        }
+    };
+
+    GameSaver.saveBasicChunkGeneratorState = function(state) {
+        _bcgState = state;
+        if (debugMode) console.log(`${pluginName}: Estado do BasicChunkGenerator salvo.`);
+    };
+
+    GameSaver.loadBasicChunkGeneratorState = function() {
+        if (debugMode) console.log(`${pluginName}: Carregando estado do BasicChunkGenerator.`);
+        return _bcgState;
+    };
+
+
+    // <<<<< EXPOSIÇÃO GLOBAL >>>>>
+    // Expõe o objeto GameSaver globalmente
+    window.GameSaver = GameSaver;
+    globalThis.GameSaver = GameSaver;
+
+    if (debugMode) console.log(`${pluginName}: Plugin carregado.`);
 })();
