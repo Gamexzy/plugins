@@ -1,287 +1,167 @@
-//=============================================================================
-// RPG Maker MZ - DayNightSystem.js
-//=============================================================================
-
 /*:
  * @target MZ
- * @plugindesc [v1.3.0] Sistema dinâmico de Dia e Noite com iluminação suave, relógio HUD e fontes de luz para eventos/jogador (Unificação de sombras de estruturas verticais, atenuação gradual e dissolução por luz local).
- * @author DeepMind Pair Programming
+ * @plugindesc [v2.0.0] Sistema Completo de Ciclo Dia/Noite, Fases da Lua, Iluminação Atmosférica HD-2D e Sombras Projetadas Coerentes.
+ * @author Antigravity AI
  *
- * @param --- Configurações de Tempo ---
- * @default
- *
- * @param SecondsPerGameMinute
- * @text Segundos por Minuto do Jogo
- * @parent --- Configurações de Tempo ---
- * @type number
- * @decimals 2
- * @desc Quantos segundos reais equivalem a 1 minuto no jogo (Ex: 1.0 = 24 minutos reais por dia de jogo).
- * @default 1.00
- *
- * @param StartHour
- * @text Hora Inicial
- * @parent --- Configurações de Tempo ---
+ * @param startHour
+ * @text Hora Inicial (0-23)
+ * @desc Hora do dia ao iniciar um novo jogo.
  * @type number
  * @min 0
  * @max 23
- * @desc Hora inicial ao começar um novo jogo (0 a 23).
  * @default 8
  *
- * @param StartMinute
- * @text Minuto Inicial
- * @parent --- Configurações de Tempo ---
+ * @param startMinute
+ * @text Minuto Inicial (0-59)
+ * @desc Minuto da hora ao iniciar um novo jogo.
  * @type number
  * @min 0
  * @max 59
- * @desc Minuto inicial ao começar um novo jogo (0 a 59).
  * @default 0
  *
- * @param TimeSpeedVariable
- * @text ID da Variável de Multiplicador de Velocidade
- * @parent --- Configurações de Tempo ---
- * @type variable
- * @desc Se configurada (> 0), o tempo é multiplicado pelo valor desta variável (0 = pausa o tempo, 2 = 2x mais rápido).
- * @default 0
- *
- * @param --- Variáveis de Sincronização ---
- * @default
- *
- * @param GameMinuteVariableId
- * @text Variável para Minuto Atual
- * @parent --- Variáveis de Sincronização ---
- * @type variable
- * @desc ID da Variável do RPG Maker onde o minuto atual (0-59) será salvo automaticamente. (0 para desativar).
- * @default 0
- *
- * @param GameHourVariableId
- * @text Variável para Hora Atual
- * @parent --- Variáveis de Sincronização ---
- * @type variable
- * @desc ID da Variável do RPG Maker onde a hora atual (0-23) será salvo automaticamente. (0 para desativar).
- * @default 0
- *
- * @param GameDayVariableId
- * @text Variável para Dia Atual
- * @parent --- Variáveis de Sincronização ---
- * @type variable
- * @desc ID da Variável do RPG Maker onde o número de dias decorridos será salvo. (0 para desativar).
- * @default 0
- *
- * @param IsNightSwitchId
- * @text Switch 'É Noite'
- * @parent --- Variáveis de Sincronização ---
- * @type switch
- * @desc Switch que ficará ON durante a noite e madrugada (20h às 5h) e OFF durante o dia. (0 para desativar).
- * @default 0
- *
- * @param --- HUD do Relógio ---
- * @default
- *
- * @param ShowClockHud
- * @text Exibir Relógio na Tela
- * @parent --- HUD do Relógio ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Se verdadeiro, mostra um elegante mostrador com hora, período do dia e ícone na tela.
- * @default true
- *
- * @param ClockX
- * @text Posição X do Relógio
- * @parent --- HUD do Relógio ---
+ * @param dayDurationMinutes
+ * @text Duração do Dia (Minutos Reais)
+ * @desc Quantos minutos na vida real dura um ciclo completo de 24 horas no jogo.
  * @type number
- * @desc Coordenada X na tela.
- * @default 20
- *
- * @param ClockY
- * @text Posição Y do Relógio
- * @parent --- HUD do Relógio ---
- * @type number
- * @desc Coordenada Y na tela.
- * @default 150
- *
- * @param --- Fontes de Luz e Sombras ---
- * @default
- *
- * @param PlayerLanternEnabled
- * @text Lanterna do Jogador à Noite
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Se ativado, o jogador emite automaticamente um círculo de luz ao redor de si durante a noite.
- * @default true
- *
- * @param PlayerLanternRadius
- * @text Raio da Lanterna do Jogador
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @desc Raio em pixels da luz emitida pelo jogador.
- * @default 100
- *
- * @param EnableDynamicShadows
- * @text Ativar Sombras Dinâmicas (Personagens)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Projeta sombras suaves para o jogador e personagens/eventos que se movem de acordo com a posição do sol.
- * @default true
- *
- * @param EnableTileShadows
- * @text Ativar Sombras do Mapa (Objetos/Paredes)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Projeta automaticamente sombras do sol para paredes, telhados, montanhas e árvores altas do mapa.
- * @default true
- *
- * @param MaxShadowLength
- * @text Comprimento Máximo da Sombra
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @desc Comprimento máximo da sombra em pixels durante o amanhecer e entardecer (ex: 28).
+ * @min 1
+ * @max 1440
  * @default 24
  *
- * @param ShadowOpacity
- * @text Opacidade da Sombra Solar
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @decimals 2
- * @min 0.0
- * @max 1.0
- * @desc Opacidade da sombra solar projetada (0.0 = invisível, 1.0 = preta opaca).
- * @default 0.45
- *
- * @param TileShadowOpacity
- * @text Opacidade da Sombra dos Objetos do Mapa
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @decimals 2
- * @min 0.0
- * @max 1.0
- * @desc Opacidade da sombra das paredes, telhados e árvores do mapa (0.0 a 1.0).
- * @default 0.40
- *
- * @param EnableFlameFlicker
- * @text Ativar Tremeluzir de Chamas (Flicker)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Se ativado, tochas, fogueiras e lanternas tremulam suavemente de forma orgânica com microturbulência de vento.
- * @default true
- *
- * @param EnableNaturalColorGrading
- * @text Cores Físicas Contínuas (Kelvin / Rayleigh)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Utiliza cálculo de radiação de corpo negro (Kelvin) e dispersão atmosférica de Rayleigh para sol, dourado e céu.
- * @default true
- *
- * @param EnableSoftShadows
- * @text Ativar Penumbra Suave (Soft Blur)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Aplica difusão suave por GPU nas bordas das sombras, eliminando recortes rígidos e quinas duras.
- * @default true
- *
- * @param ShadowBlur
- * @text Intensidade da Penumbra Suave
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @decimals 1
- * @min 0.5
- * @max 5.0
- * @desc Grau de desfoque/penumbra suave nas bordas da sombra (padrão: 1.5).
- * @default 1.5
- *
- * @param ShadowBlendMode
- * @text Modo de Mesclagem da Sombra
- * @parent --- Fontes de Luz e Sombras ---
- * @type select
- * @option Multiply (Multiplicar - Mais Realista)
- * @value 2
- * @option Normal (Translúcido Padrão)
- * @value 0
- * @desc Modo de mesclagem GPU. Multiply preserva e aprofunda as cores do terreno (neve azulada, grama viva).
- * @default 2
- *
- * @param CanopyHeightOffset
- * @text Deslocamento de Altura da Copa (Canopy Offset)
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @decimals 2
- * @min 0.00
- * @max 2.00
- * @desc Fator de elevação (0.0 a 2.0) para deslocar a sombra de tiles flutuantes isolados (*), criando paralaxe 3D.
- * @default 0.00
- *
- * @param EnableContactShadow
- * @text Ativar Sombra de Contato nos Pés (Ambient Occlusion)
- * @parent --- Fontes de Luz e Sombras ---
- * @type boolean
- * @on SIM
- * @off NÃO
- * @desc Cria uma elipse suave de oclusão de contato debaixo dos pés dos personagens, evitando que pareçam flutuar no mapa.
- * @default true
- *
- * @param ContactShadowOpacity
- * @text Opacidade da Sombra de Contato
- * @parent --- Fontes de Luz e Sombras ---
- * @type number
- * @decimals 2
- * @min 0.0
- * @max 1.0
- * @desc Opacidade da elipse de contato nos pés dos personagens (0.0 a 1.0).
- * @default 0.55
- *
- * @param StartMoonPhase
- * @text Fase Inicial da Lua
- * @type select
- * @option 0 - Lua Nova (Breu Total)
- * @value 0
- * @option 1 - Lua Crescente
- * @value 1
- * @option 2 - Quarto Crescente
- * @value 2
- * @option 3 - Crescente Gibosa
- * @value 3
- * @option 4 - Lua Cheia (Mais Clara + Sombra Lunar)
- * @value 4
- * @option 5 - Minguante Gibosa
- * @value 5
- * @option 6 - Quarto Minguante
- * @value 6
- * @option 7 - Lua Minguante
- * @value 7
- * @desc Fase da lua no Dia 1 (avança automaticamente a cada noite).
- * @default 2
- *
- * @param MoonPhaseVariableId
- * @text Variável da Fase da Lua (0-7)
- * @type variable
- * @desc ID da variável do jogo para salvar a fase atual da lua (0=Nova, 4=Cheia, 0=Desativado).
+ * @param timeSwitchPause
+ * @text Switch para Pausar Tempo
+ * @desc ID da Switch que, quando LIGADA (ON), pausa a passagem do tempo (0 = nenhum).
+ * @type switch
  * @default 0
  *
+ * @param showClockHud
+ * @text Mostrar Relógio na Tela
+ * @desc Exibe um HUD elegante com a hora atual, fase da lua e período do dia no mapa.
+ * @type boolean
+ * @default true
+ *
+ * @param clockX
+ * @text Posição X do Relógio
+ * @desc Coordenada X do HUD do relógio no mapa.
+ * @type number
+ * @default 16
+ *
+ * @param clockY
+ * @text Posição Y do Relógio
+ * @desc Coordenada Y do HUD do relógio no mapa.
+ * @type number
+ * @default 16
+ *
+ * @param hourVariableId
+ * @text Variável: Hora Atual
+ * @desc ID da variável do jogo onde a hora atual (0-23) será gravada (0 = desativado).
+ * @type variable
+ * @default 0
+ *
+ * @param minuteVariableId
+ * @text Variável: Minuto Atual
+ * @desc ID da variável do jogo onde o minuto atual (0-59) será gravado (0 = desativado).
+ * @type variable
+ * @default 0
+ *
+ * @param dayVariableId
+ * @text Variável: Contador de Dias
+ * @desc ID da variável do jogo onde o total de dias decorridos será gravado (0 = desativado).
+ * @type variable
+ * @default 0
+ *
+ * @param periodVariableId
+ * @text Variável: Período do Dia
+ * @desc Grava o período: 0=Madrugada, 1=Amanhecer, 2=Dia, 3=Entardecer, 4=Noite (0 = desativado).
+ * @type variable
+ * @default 0
+ *
+ * @param isNightSwitchId
+ * @text Switch: Está de Noite?
+ * @desc Switch ligada automaticamente entre 19:00 e 05:59 (0 = desativado).
+ * @type switch
+ * @default 0
+ *
+ * @param moonPhaseVariableId
+ * @text Variável: Fase da Lua (0-7)
+ * @desc Grava a fase da lua: 0=Nova, 1=Cresc. Côncava, 2=Quarto Cresc., 3=Cresc. Gibosa, 4=Cheia, 5=Ming. Gibosa, 6=Quarto Ming., 7=Ming. Côncava.
+ * @type variable
+ * @default 0
+ *
+ * @param startMoonPhase
+ * @text Fase Inicial da Lua (0-7)
+ * @desc Fase da lua no Dia 1 (0 = Lua Nova, 2 = Quarto Crescente, 4 = Lua Cheia).
+ * @type number
+ * @min 0
+ * @max 7
+ * @default 2
+ *
+ * @param playerLightSwitchId
+ * @text Switch: Lanterna do Jogador
+ * @desc Quando ligada, o jogador emite um halo de luz próprio ao seu redor (0 = sempre ativo à noite).
+ * @type switch
+ * @default 0
+ *
+ * @param playerLightRadius
+ * @text Raio da Luz do Jogador
+ * @desc Raio em pixels da luz da lanterna do jogador.
+ * @type number
+ * @default 160
+ *
+ * @param playerLightColor
+ * @text Cor da Luz do Jogador
+ * @desc Cor hexadecimal da lanterna do jogador.
+ * @type string
+ * @default #ffbb66
+ *
+ * @param enableDynamicShadows
+ * @text Sombras Solares Dinâmicas
+ * @desc Projeta sombras reais no chão para o jogador, eventos e estruturas de acordo com o ângulo do Sol e da Lua.
+ * @type boolean
+ * @default true
+ *
+ * @param enableTileShadows
+ * @text Sombras de Estruturas do Mapa (Tiles)
+ * @desc Faz árvores, muros, casas e pilares projetarem sombras contínuas com perspectiva 2.5D coerente.
+ * @type boolean
+ * @default true
+ *
+ * @param shadowIntensity
+ * @text Intensidade das Sombras (%)
+ * @desc Opacidade máxima das sombras projetadas ao meio-dia (50 a 200%).
+ * @type number
+ * @min 20
+ * @max 200
+ * @default 100
+ *
+ * @param shadowLengthMultiplier
+ * @text Comprimento das Sombras (%)
+ * @desc Multiplicador do comprimento das sombras projetadas (50 a 250%).
+ * @type number
+ * @min 50
+ * @max 250
+ * @default 110
+ *
+ * @param shadowWidthMultiplier
+ * @text Largura das Sombras (%)
+ * @desc Multiplicador da escala/largura geral das sombras projetadas (50 a 250%).
+ * @type number
+ * @min 50
+ * @max 250
+ * @default 100
+ *
  * @command setTime
- * @text Definir Horário
- * @desc Altera a hora e minuto atuais do jogo.
+ * @text Definir Hora
+ * @desc Define imediatamente a hora e o minuto do jogo.
  *
  * @arg hour
- * @text Hora
+ * @text Hora (0-23)
  * @type number
  * @min 0
  * @max 23
  * @default 12
  *
  * @arg minute
- * @text Minuto
+ * @text Minuto (0-59)
  * @type number
  * @min 0
  * @max 59
@@ -289,770 +169,696 @@
  *
  * @command addTime
  * @text Avançar Tempo
- * @desc Avança um determinado número de horas e minutos.
+ * @desc Avança o relógio em horas e minutos.
  *
  * @arg hours
- * @text Horas a Avançar
+ * @text Horas a avançar
  * @type number
+ * @min 0
  * @default 1
  *
  * @arg minutes
- * @text Minutos a Avançar
+ * @text Minutos a avançar
  * @type number
+ * @min 0
  * @default 0
  *
- * @command setTimePaused
- * @text Pausar/Retomar Tempo
- * @desc Pausa ou retoma o fluxo do ciclo de dia e noite.
+ * @command pauseTime
+ * @text Pausar / Retomar Tempo
+ * @desc Pausa ou retoma a contagem automática de tempo.
  *
- * @arg paused
- * @text Pausado?
+ * @arg pause
+ * @text Pausar?
  * @type boolean
  * @default true
  *
- * @command setIndoorMode
- * @text Modo Interior (Desativar Luz Ambiente)
- * @desc Ativa ou desativa o modo interior para o mapa atual (desativa a escuridão do dia/noite).
+ * @command SetTimeSpeed
+ * @text Definir Velocidade do Tempo
+ * @desc Altera quantos minutos reais dura um dia completo no jogo.
  *
- * @arg indoor
- * @text Interior?
- * @type boolean
- * @default true
+ * @arg speed
+ * @text Minutos Reais por Dia
+ * @type number
+ * @min 1
+ * @max 1440
+ * @default 24
  *
  * @command setMoonPhase
  * @text Definir Fase da Lua
- * @desc Altera manualmente a fase atual da lua (0 a 7).
+ * @desc Altera imediatamente a fase da lua atual (0 = Nova, 4 = Cheia, 0-7).
  *
  * @arg phase
- * @text Fase da Lua (0-7)
- * @type select
- * @option 0 - Lua Nova
- * @value 0
- * @option 1 - Lua Crescente
- * @value 1
- * @option 2 - Quarto Crescente
- * @value 2
- * @option 3 - Crescente Gibosa
- * @value 3
- * @option 4 - Lua Cheia
- * @value 4
- * @option 5 - Minguante Gibosa
- * @value 5
- * @option 6 - Quarto Minguante
- * @value 6
- * @option 7 - Lua Minguante
- * @value 7
+ * @text Fase (0 a 7)
+ * @type number
+ * @min 0
+ * @max 7
  * @default 4
  *
- * @help DayNightSystem.js
+ * @help
  * ============================================================================
- * SISTEMA COMPLETO DE DIA E NOITE COM MUDANÇAS DE LUZ E FASES DA LUA (MZ)
+ * DayNightSystem.js [v2.0.0] - Iluminação HD-2D & Sombras Coerentes
  * ============================================================================
- * 
- * Este plugin adiciona um ciclo orgânico de 24 horas ao jogo com:
- *  1. Mudança de iluminação gradativa e suave entre Madrugada, Alvorecer, Manhã,
- *     Tarde, Entardecer/Pôr do Sol, Noite Profunda e Ciclo Lunar de 8 Fases.
- *  2. Ciclo de 8 Fases da Lua:
- *     - 0: Lua Nova (96% de escuridão, breu profundo sem luar)
- *     - 1: Lua Crescente (94% de escuridão)
- *     - 2: Quarto Crescente (92% de escuridão)
- *     - 3: Crescente Gibosa (89% de escuridão + sombra lunar suave)
- *     - 4: Lua Cheia (86% de escuridão azul-noturno + sombra lunar nítida)
- *     - 5: Minguante Gibosa (89% de escuridão + sombra lunar suave)
- *     - 6: Quarto Minguante (92% de escuridão)
- *     - 7: Lua Minguante (94% de escuridão)
- *  3. Sombras Dinâmicas Solares e Lunares em Tempo Real:
- *     - Durante o dia, o sol projeta sombras naturais para o jogador, seguidores,
- *       eventos e objetos/estruturas do mapa.
- *     - Em noites de Lua Cheia ou Gibosa, o luar também projeta sombras sutis!
- *     - Eventos com a tag <no_shadow> nas notas não projetam sombra.
- *  4. Máscara de Luz Dinâmica (Light Mask): Durante a noite e entardecer,
- *     o jogador e eventos com tags especiais iluminam os arredores em tempo real!
- *  5. Suporte a Ambientes Interiores (Indoors):
- *     - Coloque a tag <indoor> nas Notas do Mapa para que o ciclo não escureça
- *       aquele mapa e desative as sombras solares externas.
- *     - Ou a tag <outdoor> para forçar a iluminação externa.
- *  6. Eventos que emitem luz (Tochas, Fogueiras, Postes, Cristais):
- *     - Basta colocar um comentário na página do evento ou na Nota do Evento:
- *       <light: raio>
- *       Exemplo: <light: 120> (gera uma luz de 120px de raio)
- *       Exemplo com cor: <light: 140, #ffaa44> (luz alaranjada de tocha/fogo)
- *  7. Relógio HUD com ícone dinâmico do Sol e das 8 Fases da Lua.
  *
- * ============================================================================
- * CÓDIGO JS / SCRIPT CALLS
- * ============================================================================
- * - $gameSystem.dayNightHour()        -> Retorna a hora atual (0 a 23)
- * - $gameSystem.dayNightMinute()      -> Retorna o minuto atual (0 a 59)
- * - $gameSystem.dayNightDay()         -> Retorna o número de dias decorridos
- * - $gameSystem.dayNightMoonPhase()   -> Retorna a fase da lua (0 a 7)
- * - $gameSystem.dayNightMoonName()    -> Retorna o nome da fase da lua atual
- * - $gameSystem.setMoonPhase(0..7)    -> Define a fase da lua
- * - $gameSystem.isNight()             -> Retorna true se for noite
- * - $gameSystem.setTime(hora, minuto) -> Define o horário
- * - $gameSystem.addTime(horas, min)   -> Avança o horário
+ * Novidades da v2.0.0:
+ * 1. Geometria Solar/Lunar 2.5D Unificada:
+ *    - Personagens, árvores, muros, pilares e telhados usam exatamente a mesma
+ *      matriz de projeção afim no plano do chão:
+ *        [ x' ] = [ 1  -Sx ] [ x ]
+ *        [ y' ]   [ 0   Sy ] [ y ]
+ *      ancorada na linha de base real (y_base) de cada estrutura!
+ *    - Corrige a inversão onde personagens e tiles projetavam sombras em
+ *      direções opostas.
+ * 2. Sombras de Estruturas Sem Costuras (Zero Grid Seams):
+ *    - Agrupa colunas verticais conectadas (tronco + copa '*' / parede + telhado)
+ *      na mesma âncora terrestre (ty_base), projetando árvores e construções
+ *      inteiras como uma única silhueta contínua com penumbra suave em 3 passes.
+ *    - Usa normalização de alfa via 'source-in' para evitar escurecimento duplo
+ *      entre tiles adjacentes.
+ * 3. Reação Dinâmica a Luzes Locais:
+ *    - Ao caminhar perto de tochas, fogueiras ou matrizes luminosas, a sombra
+ *      dos personagens se inclina suavemente na direção oposta à fonte de luz.
+ * 4. Iluminação Atmosférica & Bloom Aditivo (PIXI.BLEND_MODES.ADD):
+ *    - Camada de ambiência com vinheta cinematográfica sutil + camada separada
+ *      de Bloom Aditivo para que tochas, cristais e lanternas realmente brilhem.
+ *
+ * ----------------------------------------------------------------------------
+ * TAGS PARA NOTAS DO MAPA (Map Note):
+ * ----------------------------------------------------------------------------
+ *   <NoDayNight> ou <Indoor>
+ *     Desativa completamente o efeito de luz e escuridão neste mapa.
+ *
+ *   <AmbientDarkness: 75>
+ *     Define uma escuridão fixa para o mapa (0 a 100%).
+ *
+ *   <Sunless>
+ *     Bloqueia a luz direta do Sol/Lua (ideal para cavernas).
+ *
+ * ----------------------------------------------------------------------------
+ * TAGS PARA EVENTOS (Nota do Evento ou Comentário na Página Ativa):
+ * ----------------------------------------------------------------------------
+ *   <light: RAIO, #COR>     Ex: <light: 180, #ffaa44>
+ *   <torch> / <tocha>       Luz de tocha bruxuleante (raio 150, laranja quente)
+ *   <bonfire> / <fogueira>  Luz de fogueira intensa (raio 230, fogo)
+ *   <lantern> / <lanterna>  Luz de poste/lanterna (raio 160, dourado suave)
+ *   <crystal> / <cristal>   Luz espiritual/cristal (raio 140, ciano místico)
+ *   <candle> / <vela>       Luz de vela suave (raio 95, âmbar)
+ *   <noShadow> / <semSombra> Desativa a sombra projetada neste evento
  * ============================================================================
  */
 
 (() => {
     'use strict';
 
+    const pluginName = "DayNightSystem";
+    const parameters = PluginManager.parameters(pluginName);
+
+    const defaultStartHour = Number(parameters['startHour'] || 8);
+    const defaultStartMinute = Number(parameters['startMinute'] || 0);
+    const defaultDayDuration = Math.max(1, Number(parameters['dayDurationMinutes'] || 24));
+    const timeSwitchPause = Number(parameters['timeSwitchPause'] || 0);
+    const showClockHud = String(parameters['showClockHud'] || 'true') === 'true';
+    const clockX = Number(parameters['clockX'] || 16);
+    const clockY = Number(parameters['clockY'] || 16);
+
+    const hourVariableId = Number(parameters['hourVariableId'] || 0);
+    const minuteVariableId = Number(parameters['minuteVariableId'] || 0);
+    const dayVariableId = Number(parameters['dayVariableId'] || 0);
+    const periodVariableId = Number(parameters['periodVariableId'] || 0);
+    const isNightSwitchId = Number(parameters['isNightSwitchId'] || 0);
+    const moonPhaseVariableId = Number(parameters['moonPhaseVariableId'] || 0);
+    const startMoonPhase = Math.max(0, Math.min(7, Number(parameters['startMoonPhase'] !== undefined ? parameters['startMoonPhase'] : 2)));
+
+    const playerLightSwitchId = Number(parameters['playerLightSwitchId'] || 0);
+    const playerLightRadius = Number(parameters['playerLightRadius'] || 160);
+    const playerLightColor = String(parameters['playerLightColor'] || '#ffbb66');
+
+    const enableDynamicShadows = String(parameters['enableDynamicShadows'] || 'true') === 'true';
+    const enableTileShadows = String(parameters['enableTileShadows'] || 'true') === 'true';
+    const shadowIntensity = Math.max(20, Math.min(200, Number(parameters['shadowIntensity'] || 100))) / 100;
+    const shadowLengthMultiplier = Math.max(50, Math.min(250, Number(parameters['shadowLengthMultiplier'] || 110))) / 100;
+    const shadowWidthMultiplier = Math.max(50, Math.min(250, Number(parameters['shadowWidthMultiplier'] || 100))) / 100;
+
     // =========================================================================
-    // 0. Declarações de Funções Auxiliares no Topo da IIFE
+    // 1. Fases da Lua & Paleta Atmosférica Cinematográfica (24 Horas)
     // =========================================================================
 
-    function getCurrentMoonData() {
-        const phaseIdx = (typeof $gameSystem !== 'undefined' && $gameSystem &&$gameSystem.dayNightMoonPhase)
-            ? $gameSystem.dayNightMoonPhase()
-            : ((startMoonPhase % 8) + 8) % 8;
-        return MOON_PHASES[phaseIdx] || MOON_PHASES[2];
+    const MOON_PHASES = [
+        { index: 0, name: "Lua Nova",         illumination: 0.00, r: 2,  g: 3,  b: 10, alpha: 0.95, shadowStrength: 0.08 },
+        { index: 1, name: "Cresc. Côncava",   illumination: 0.22, r: 3,  g: 5,  b: 14, alpha: 0.91, shadowStrength: 0.18 },
+        { index: 2, name: "Quarto Crescente", illumination: 0.50, r: 5,  g: 9,  b: 22, alpha: 0.87, shadowStrength: 0.32 },
+        { index: 3, name: "Cresc. Gibosa",    illumination: 0.78, r: 7,  g: 13, b: 28, alpha: 0.82, shadowStrength: 0.46 },
+        { index: 4, name: "Lua Cheia",        illumination: 1.00, r: 10, g: 18, b: 38, alpha: 0.75, shadowStrength: 0.65 },
+        { index: 5, name: "Ming. Gibosa",     illumination: 0.78, r: 7,  g: 13, b: 28, alpha: 0.82, shadowStrength: 0.46 },
+        { index: 6, name: "Quarto Minguante", illumination: 0.50, r: 5,  g: 9,  b: 22, alpha: 0.87, shadowStrength: 0.32 },
+        { index: 7, name: "Ming. Côncava",    illumination: 0.22, r: 3,  g: 5,  b: 14, alpha: 0.91, shadowStrength: 0.18 }
+    ];
+
+    function getMoonPhaseData(phaseIndex) {
+        const idx = ((Math.floor(phaseIndex) % 8) + 8) % 8;
+        return MOON_PHASES[idx];
     }
 
     /**
-     * Converte Temperatura de Cor (Kelvin 1000K a 15000K) em RGB linear.
-     * Algoritmo de Tanner Helland baseado em emissão de corpo negro e física estelar.
+     * Paleta de iluminação ambiente de 24 horas:
+     * r, g, b, alpha: camada atmosférica
+     * shadowR, shadowG, shadowB: temperatura de cor das sombras projetadas no chão
+     * vignette: intensidade da vinheta atmosférica nas bordas da tela
      */
-    function kelvinToRGB(kelvin) {
-        const temp = Math.max(1000, Math.min(15000, kelvin)) / 100;
-        let red = 0;
-        let green = 0;
-        let blue = 0;
+    const TIME_KEYFRAMES = [
+        { hour: 0,    r: 4,   g: 7,   b: 18,  alpha: 0.88, sr: 4,  sg: 8,  sb: 20, vig: 0.32, period: 0, label: "Meia-Noite" },
+        { hour: 4,    r: 6,   g: 9,   b: 22,  alpha: 0.86, sr: 6,  sg: 10, sb: 24, vig: 0.30, period: 0, label: "Madrugada" },
+        { hour: 5,    r: 36,  g: 24,  b: 58,  alpha: 0.58, sr: 20, sg: 14, sb: 36, vig: 0.18, period: 1, label: "Alvorada" },
+        { hour: 6,    r: 255, g: 148, b: 96,  alpha: 0.22, sr: 28, sg: 22, sb: 46, vig: 0.08, period: 1, label: "Amanhecer" },
+        { hour: 7.5,  r: 255, g: 225, b: 175, alpha: 0.08, sr: 20, sg: 26, sb: 44, vig: 0.03, period: 2, label: "Manhã" },
+        { hour: 10,   r: 255, g: 255, b: 255, alpha: 0.00, sr: 16, sg: 22, sb: 38, vig: 0.00, period: 2, label: "Manhã" },
+        { hour: 12,   r: 255, g: 255, b: 245, alpha: 0.00, sr: 14, sg: 20, sb: 36, vig: 0.00, period: 2, label: "Meio-Dia" },
+        { hour: 15.5, r: 255, g: 242, b: 215, alpha: 0.04, sr: 18, sg: 22, sb: 40, vig: 0.02, period: 2, label: "Tarde" },
+        { hour: 17,   r: 255, g: 168, b: 78,  alpha: 0.22, sr: 26, sg: 20, sb: 44, vig: 0.10, period: 3, label: "Hora Dourada" },
+        { hour: 18,   r: 210, g: 80,  b: 68,  alpha: 0.42, sr: 22, sg: 14, sb: 38, vig: 0.16, period: 3, label: "Pôr do Sol" },
+        { hour: 19,   r: 42,  g: 22,  b: 62,  alpha: 0.72, sr: 10, sg: 10, sb: 28, vig: 0.24, period: 4, label: "Crepúsculo" },
+        { hour: 20.5, r: 6,   g: 10,  b: 24,  alpha: 0.86, sr: 6,  sg: 10, sb: 24, vig: 0.30, period: 4, label: "Noite" },
+        { hour: 24,   r: 4,   g: 7,   b: 18,  alpha: 0.88, sr: 4,  sg: 8,  sb: 20, vig: 0.32, period: 0, label: "Meia-Noite" }
+    ];
 
-        if (temp <= 66) {
-            red = 255;
-        } else {
-            red = temp - 60;
-            red = 329.698727446 * Math.pow(red, -0.1332047592);
-            red = Math.max(0, Math.min(255, red));
-        }
-
-        if (temp <= 66) {
-            green = temp;
-            green = 99.4708025861 * Math.log(green) - 161.1195681661;
-            green = Math.max(0, Math.min(255, green));
-        } else {
-            green = temp - 60;
-            green = 288.1221695283 * Math.pow(green, -0.0755148492);
-            green = Math.max(0, Math.min(255, green));
-        }
-
-        if (temp >= 66) {
-            blue = 255;
-        } else if (temp <= 19) {
-            blue = 0;
-        } else {
-            blue = temp - 10;
-            blue = 138.5177312231 * Math.log(blue) - 305.0447927307;
-            blue = Math.max(0, Math.min(255, blue));
-        }
-
-        return { r: Math.round(red), g: Math.round(green), b: Math.round(blue) };
+    function smoothstep(t) {
+        const c = Math.max(0, Math.min(1, t));
+        return c * c * (3 - 2 * c);
     }
 
-    /**
-     * Calcula o vetor e intensidade da sombra do sol (ou da lua em noites claras) com base no minuto atual.
-     * Retorna { skewX, scaleY, elevationFactor, alpha, shadowColor, shadowRgb, visible }
-     */
-    function getSunShadowVectorForTime(totalMinutes) {
-        if (!enableDynamicShadows && !enableTileShadows) {
-            return { skewX: 0, scaleY: 0, elevationFactor: 0, alpha: 0, shadowColor: 'rgba(0,0,0,0)', shadowRgb: 'rgb(0,0,0)', visible: false };
-        }
-
-        const hour = (totalMinutes % 1440) / 60; // 0.00 a 23.99
-
-        // 1. Período Diurno (Sol entre 5h30 e 18h30)
-        if (hour >= 5.5 && hour <= 18.5) {
-            const sunProgress = (hour - 5.5) / 13.0; // 0.0 a 1.0
-            const sunAngle = sunProgress * Math.PI;  // 0 a PI
-
-            const skewX = -Math.cos(sunAngle) * 1.35;
-            const elevation = Math.sin(sunAngle); // 0 no horizonte, 1 no zênite
-            const scaleY = (0.28 + (1.0 - elevation) * 0.48) * (maxShadowLength / 24);
-
-            const elevationFactor = Math.min(1.0, elevation * 1.5);
-            const alpha = shadowOpacity * elevationFactor;
-
-            let shadowColor = `rgba(0, 0, 0, ${alpha.toFixed(2)})`;
-            let shadowRgb = 'rgb(0, 0, 0)';
-            if (enableNaturalColorGrading) {
-                if (elevation < 0.5) {
-                    const skyMix = (1.0 - elevation * 2.0);
-                    const sr = Math.round(10 + 18 * skyMix);
-                    const sg = Math.round(14 + 16 * skyMix);
-                    const sb = Math.round(38 + 38 * skyMix);
-                    shadowColor = `rgba(${sr}, ${sg}, ${sb}, ${alpha.toFixed(2)})`;
-                    shadowRgb = `rgb(${sr}, ${sg}, ${sb})`;
-                } else {
-                    shadowColor = `rgba(6, 10, 18, ${alpha.toFixed(2)})`;
-                    shadowRgb = 'rgb(6, 10, 18)';
-                }
-            }
-
-            return {
-                skewX,
-                scaleY,
-                elevationFactor,
-                alpha: Math.max(0, Math.min(1, alpha)),
-                shadowColor,
-                shadowRgb,
-                visible: elevationFactor > 0.05
-            };
-        }
-
-        // 2. Período Noturno (Sombra Lunar entre 19h30 e 04h30 quando a Lua ilumina >= 35%)
-        const moon = getCurrentMoonData();
-        if (moon.illumination >= 0.35 && (hour >= 19.5 || hour <= 4.5)) {
-            const nightElapsed = (hour >= 19.5) ? (hour - 19.5) : (hour + 24.0 - 19.5);
-            const moonProgress = nightElapsed / 9.0; // 0.0 (19h30) a 1.0 (04h30)
-            const moonAngle = moonProgress * Math.PI;
-
-            const skewX = -Math.cos(moonAngle) * 1.15;
-            const elevation = Math.sin(moonAngle);
-            const scaleY = (0.30 + (1.0 - elevation) * 0.40) * (maxShadowLength / 24);
-
-            const elevationFactor = Math.min(1.0, elevation * 1.4) * moon.illumination * 0.65;
-            const alpha = shadowOpacity * elevationFactor;
-
-            return {
-                skewX,
-                scaleY,
-                elevationFactor,
-                alpha: Math.max(0, Math.min(1, alpha)),
-                shadowColor: `rgba(2, 4, 10, ${alpha.toFixed(2)})`,
-                shadowRgb: 'rgb(2, 4, 10)',
-                visible: elevationFactor > 0.05
-            };
-        }
-
-        return { skewX: 0, scaleY: 0, elevationFactor: 0, alpha: 0, shadowColor: 'rgba(0,0,0,0)', shadowRgb: 'rgb(0,0,0)', visible: false };
-    }
-
-    /**
-     * Interpolação contínua com graduação de cor física e modulação pela Fase da Lua.
-     */
     function getAmbientLightForTime(totalMinutes) {
-        const hourTime = (totalMinutes % 1440) / 60; // 0.0 a 23.999
+        const currentHour = (totalMinutes / 60) % 24;
+        let k1 = TIME_KEYFRAMES[0];
+        let k2 = TIME_KEYFRAMES[TIME_KEYFRAMES.length - 1];
 
-        let prev = AMBIENT_LIGHT_SCHEDULE[0];
-        let next = AMBIENT_LIGHT_SCHEDULE[AMBIENT_LIGHT_SCHEDULE.length - 1];
-
-        for (let i = 0; i < AMBIENT_LIGHT_SCHEDULE.length - 1; i++) {
-            if (hourTime >= AMBIENT_LIGHT_SCHEDULE[i].hour && hourTime < AMBIENT_LIGHT_SCHEDULE[i + 1].hour) {
-                prev = AMBIENT_LIGHT_SCHEDULE[i];
-                next = AMBIENT_LIGHT_SCHEDULE[i + 1];
+        for (let i = 0; i < TIME_KEYFRAMES.length - 1; i++) {
+            if (currentHour >= TIME_KEYFRAMES[i].hour && currentHour <= TIME_KEYFRAMES[i + 1].hour) {
+                k1 = TIME_KEYFRAMES[i];
+                k2 = TIME_KEYFRAMES[i + 1];
                 break;
             }
         }
 
-        const span = next.hour - prev.hour;
-        const progress = span > 0 ? (hourTime - prev.hour) / span : 0;
+        const range = k2.hour - k1.hour;
+        const rawT = range > 0 ? (currentHour - k1.hour) / range : 0;
+        const t = smoothstep(rawT);
 
-        let r = Math.round(prev.r + (next.r - prev.r) * progress);
-        let g = Math.round(prev.g + (next.g - prev.g) * progress);
-        let b = Math.round(prev.b + (next.b - prev.b) * progress);
-        let alpha = Math.max(0, Math.min(1, prev.alpha + (next.alpha - prev.alpha) * progress));
+        const moonIdx = ($gameSystem && $gameSystem.dayNightMoonPhase) ? $gameSystem.dayNightMoonPhase() : startMoonPhase;
+        const moonData = getMoonPhaseData(moonIdx);
 
-        const daylightWeight = Math.max(0, 1.0 - alpha * 1.25);
-        if (enableNaturalColorGrading && prev.kelvin && next.kelvin && daylightWeight > 0) {
-            const currentKelvin = prev.kelvin + (next.kelvin - prev.kelvin) * progress;
-            const kRgb = kelvinToRGB(currentKelvin);
-            const kMix = 0.28 * daylightWeight;
-            r = Math.round(r * (1.0 - kMix) + kRgb.r * kMix);
-            g = Math.round(g * (1.0 - kMix) + kRgb.g * kMix);
-            b = Math.round(b * (1.0 - kMix) + kRgb.b * kMix);
+        function resolveEndpoint(kf) {
+            if (kf.hour <= 4.2 || kf.hour >= 20.2) {
+                return {
+                    r: moonData.r,
+                    g: moonData.g,
+                    b: moonData.b,
+                    alpha: moonData.alpha,
+                    sr: kf.sr,
+                    sg: kf.sg,
+                    sb: kf.sb,
+                    vig: kf.vig
+                };
+            }
+            if (kf.hour === 19) {
+                return {
+                    r: Math.round(kf.r * 0.65 + moonData.r * 0.35),
+                    g: Math.round(kf.g * 0.65 + moonData.g * 0.35),
+                    b: Math.round(kf.b * 0.65 + moonData.b * 0.35),
+                    alpha: kf.alpha * 0.65 + moonData.alpha * 0.35,
+                    sr: kf.sr,
+                    sg: kf.sg,
+                    sb: kf.sb,
+                    vig: kf.vig
+                };
+            }
+            return kf;
         }
 
-        const moon = getCurrentMoonData();
-        let nightFactor = 0;
-        if (hourTime >= 20 || hourTime < 4) {
-            nightFactor = 1.0;
-        } else if (hourTime >= 19 && hourTime < 20) {
-            nightFactor = hourTime - 19.0;
-        } else if (hourTime >= 4 && hourTime < 5) {
-            nightFactor = 1.0 - (hourTime - 4.0);
-        }
+        const e1 = resolveEndpoint(k1);
+        const e2 = resolveEndpoint(k2);
 
-        if (nightFactor > 0) {
-            const alphaDelta = (0.035 - moon.illumination * 0.10) * nightFactor;
-            alpha = Math.max(0, Math.min(0.97, alpha + alphaDelta));
-
-            const moonColorScale = (0.35 + moon.illumination * 1.15);
-            r = Math.round(r * (1.0 - nightFactor) + Math.min(12, r * moonColorScale) * nightFactor);
-            g = Math.round(g * (1.0 - nightFactor) + Math.min(18, g * moonColorScale) * nightFactor);
-            b = Math.round(b * (1.0 - nightFactor) + Math.min(34, b * moonColorScale) * nightFactor);
-        }
-
-        const label = (progress > 0.5) ? next.label : prev.label;
-
-        return { r, g, b, alpha, label, moon };
-    }
-
-    /**
-     * Calcula o flicker orgânico de chamas baseado em harmônicos de Fourier (3 oitavas de frequência)
-     * e turbulência de vento, evitando a oscilação mecânica de ondas senoidais simples.
-     */
-    function getFlameFlicker(seed = 0) {
-        if (!enableFlameFlicker) {
-            return { radiusMult: 1.0, alphaMult: 1.0, offsetX: 0, offsetY: 0 };
-        }
-
-        const t = (Graphics.frameCount || 0) * 0.08 + seed;
-        const wave1 = Math.sin(t * 1.5) * 0.035;
-        const wave2 = Math.sin(t * 3.7 + 1.2) * 0.025;
-        const wave3 = Math.cos(t * 8.3 + 2.7) * 0.015;
-
-        const offsetX = Math.sin(t * 2.1) * 1.2;
-        const offsetY = Math.cos(t * 1.8) * 0.8;
-
-        const flicker = wave1 + wave2 + wave3;
         return {
-            radiusMult: Math.max(0.85, Math.min(1.15, 1.0 + flicker)),
-            alphaMult: Math.max(0.80, Math.min(1.20, 1.0 + flicker * 1.5)),
-            offsetX,
-            offsetY
+            r: Math.round(e1.r + (e2.r - e1.r) * t),
+            g: Math.round(e1.g + (e2.g - e1.g) * t),
+            b: Math.round(e1.b + (e2.b - e1.b) * t),
+            alpha: Number((e1.alpha + (e2.alpha - e1.alpha) * t).toFixed(3)),
+            shadowR: Math.round(e1.sr + (e2.sr - e1.sr) * t),
+            shadowG: Math.round(e1.sg + (e2.sg - e1.sg) * t),
+            shadowB: Math.round(e1.sb + (e2.sb - e1.sb) * t),
+            vignette: Number((e1.vig + (e2.vig - e1.vig) * t).toFixed(3)),
+            period: rawT < 0.5 ? k1.period : k2.period,
+            label: rawT < 0.5 ? k1.label : k2.label
         };
     }
 
     /**
-     * Gera ou retorna o bitmap partilhado para a elipse de oclusão de contacto (Ambient Occlusion) nos pés.
+     * Geometria Solar/Lunar 2.5D Unificada:
+     * Retorna o vetor de projeção de sombra (sx, sy) por unidade de altura h acima da base:
+     *   - sx < 0: sombra aponta para Oeste (Esquerda na tela, manhã)
+     *   - sx > 0: sombra aponta para Leste (Direita na tela, tarde)
+     *   - sy > 0: compressão vertical da sombra projetada no plano do chão (para o Norte/fundo 2.5D)
+     *
+     * Tanto o Canvas2D (tiles) quanto o PIXI.Sprite (personagens) usam a MESMA matriz:
+     *   [ a  c ] = [ 1  -sx ]
+     *   [ b  d ]   [ 0   sy ]
+     * No PIXI (onde c = sin(skewX)*scaleY e d = cos(skewX)*scaleY):
+     *   skewX  = Math.atan2(-sx, sy)
+     *   scaleY = +Math.hypot(sx, sy)
      */
-    function getSharedContactShadowBitmap() {
-        if (!_sharedContactShadowBitmap) {
-            _sharedContactShadowBitmap = new Bitmap(48, 24);
-            const ctx = _sharedContactShadowBitmap.context;
-            ctx.save();
-            ctx.translate(24, 12);
-            ctx.scale(1.0, 0.45);
-            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-            grad.addColorStop(0.00, 'rgba(0, 0, 0, 0.75)');
-            grad.addColorStop(0.35, 'rgba(0, 0, 0, 0.45)');
-            grad.addColorStop(0.70, 'rgba(0, 0, 0, 0.15)');
-            grad.addColorStop(1.00, 'rgba(0, 0, 0, 0.00)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(0, 0, 15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            _sharedContactShadowBitmap._baseTexture.update();
+    function getSolarShadowTransform(totalMinutes) {
+        if ($gameSystem && $gameSystem.isDayNightIndoor()) {
+            return { sx: 0, sy: 0.45, skewX: 0, scaleY: 0.45, opacity: 0, isDaylight: false, isMoonlight: false };
         }
-        return _sharedContactShadowBitmap;
-    }
+        if ($gameSystem && $gameSystem.isMapSunless && $gameSystem.isMapSunless()) {
+            return { sx: 0, sy: 0.45, skewX: 0, scaleY: 0.45, opacity: 0, isDaylight: false, isMoonlight: false };
+        }
 
-    /**
-     * Verifica se o tile na posição (x, y) possui um tile superior (*) em (x, y - 1),
-     * permitindo identificar bases passáveis de estruturas verticais (ex: entrada de torres, árvores, portões).
-     */
-    function hasUpperTileAt(x, y, flags) {
-        if (!flags || !$gameMap.isValid(x, y)) return false;
-        const tid2 = $gameMap.tileId(x, y, 2);
-        const tid3 = $gameMap.tileId(x, y, 3);
-        if (tid2 > 0 && flags[tid2] !== undefined && (flags[tid2] & 0x10) !== 0) return true;
-        if (tid3 > 0 && flags[tid3] !== undefined && (flags[tid3] & 0x10) !== 0) return true;
-        return false;
-    }
+        const currentHour = (totalMinutes / 60) % 24;
+        const lenMult = shadowLengthMultiplier * shadowWidthMultiplier;
 
-    /**
-     * Verifica se a coordenada (x, y) é uma parede vertical (A3/A4 de parede ou A5 vertical).
-     */
-    function isWallLocation(x, y) {
-        if (typeof $gameMap === 'undefined' || !$gameMap || !$gameMap.isValid(x, y)) return false;
-        const t0 = $gameMap.tileId(x, y, 0);
-        const t1 = $gameMap.tileId(x, y, 1);
-        for (const tid of [t0, t1]) {
-            if (tid > 0 && typeof Tilemap !== 'undefined') {
-                if (Tilemap.isWallSideTile && Tilemap.isWallSideTile(tid)) return true;
-                if (Tilemap.isShadowingTile && Tilemap.isShadowingTile(tid) && (!Tilemap.isRoofTile || !Tilemap.isRoofTile(tid))) return true;
+        // Transição suave entre Sol (05:15 - 19:00) e Lua (18:45 - 05:30)
+        let sunWeight = 0;
+        if (currentHour >= 5.25 && currentHour <= 19.0) {
+            if (currentHour < 6.25) {
+                sunWeight = smoothstep((currentHour - 5.25) / 1.0);
+            } else if (currentHour > 18.0) {
+                sunWeight = 1.0 - smoothstep((currentHour - 18.0) / 1.0);
+            } else {
+                sunWeight = 1.0;
             }
         }
-        return false;
+
+        // --- Vetor Solar (05:15 às 19:00) ---
+        // Sol nasce a Leste (direita -> sombra para Oeste sx < 0), passa pelo zênite às 12:00 (sx = 0),
+        // e se põe a Oeste (esquerda -> sombra para Leste sx > 0).
+        const dayProgress = Math.max(0, Math.min(1, (currentHour - 5.25) / (19.0 - 5.25)));
+        const sunAngle = dayProgress * Math.PI; // 0 (nascer) -> PI/2 (meio-dia) -> PI (pôr do sol)
+        const sunElevation = Math.sin(sunAngle); // 0 no horizonte -> 1 no meio-dia
+        const sunHoriz = -Math.cos(sunAngle);    // -1 (manhã, sombra p/ esquerda) -> +1 (tarde, sombra p/ direita)
+
+        const sunSx = sunHoriz * 0.92 * lenMult;
+        const sunSy = (0.38 + (1.0 - sunElevation) * 0.34) * lenMult;
+        const sunOpacity = (0.24 + 0.34 * Math.pow(sunElevation, 0.65)) * shadowIntensity;
+
+        // --- Vetor Lunar (18:45 às 05:30) ---
+        let nightHours = currentHour >= 18.75 ? (currentHour - 18.75) : (currentHour + (24 - 18.75));
+        const nightProgress = Math.max(0, Math.min(1, nightHours / 10.75));
+        const moonAngle = nightProgress * Math.PI;
+        const moonElevation = Math.sin(moonAngle);
+        const moonHoriz = -Math.cos(moonAngle);
+
+        const moonIdx = ($gameSystem && $gameSystem.dayNightMoonPhase) ? $gameSystem.dayNightMoonPhase() : startMoonPhase;
+        const moonData = getMoonPhaseData(moonIdx);
+
+        const moonSx = moonHoriz * 0.78 * lenMult;
+        const moonSy = (0.36 + (1.0 - moonElevation) * 0.28) * lenMult;
+        const moonOpacity = (0.08 + 0.34 * moonElevation) * moonData.shadowStrength * shadowIntensity;
+
+        // --- Interpolação Contínua Sol <-> Lua (zero saltos na alvorada/crepúsculo) ---
+        const sx = sunSx * sunWeight + moonSx * (1.0 - sunWeight);
+        const sy = Math.max(0.22, sunSy * sunWeight + moonSy * (1.0 - sunWeight));
+        const opacity = Math.min(0.68, sunOpacity * sunWeight + moonOpacity * (1.0 - sunWeight));
+
+        // Conversão exata para PIXI.Sprite (onde lt.c = sin(skewX)*scaleY = -sx e lt.d = cos(skewX)*scaleY = sy)
+        const skewX = Math.atan2(-sx, sy);
+        const scaleY = Math.hypot(sx, sy);
+
+        return {
+            sx,
+            sy,
+            skewX,
+            scaleY,
+            opacity,
+            elevation: sunWeight >= 0.5 ? sunElevation : moonElevation,
+            isDaylight: sunWeight >= 0.5,
+            isMoonlight: sunWeight < 0.5 && opacity > 0.01
+        };
     }
 
-    /**
-     * Verifica se (x, y) é uma borda de silhueta da parede (base em contato com o chão ou laterais livres).
-     * Permite extrudar a massa arquitetônica unificada do prédio sem fatiar tijolos internos.
-     */
-    function isWallEdgeLocation(x, y) {
-        if (!isWallLocation(x, y)) return false;
-        // Base da parede (chão/rua abaixo)
-        if (!isWallLocation(x, y + 1)) return true;
-        // Lateral esquerda livre
-        if (!$gameMap.isValid(x - 1, y) || !isWallLocation(x - 1, y)) return true;
-        // Lateral direita livre
-        if (!$gameMap.isValid(x + 1, y) || !isWallLocation(x + 1, y)) return true;
-        return false;
+    function hexToRgb(hex) {
+        const cleanHex = String(hex || '#ffbb66').trim().replace('#', '');
+        if (cleanHex.length === 3) {
+            return {
+                r: parseInt(cleanHex[0] + cleanHex[0], 16) || 255,
+                g: parseInt(cleanHex[1] + cleanHex[1], 16) || 187,
+                b: parseInt(cleanHex[2] + cleanHex[2], 16) || 102
+            };
+        }
+        const bigint = parseInt(cleanHex, 16);
+        if (isNaN(bigint)) return { r: 255, g: 187, b: 102 };
+        return {
+            r: (bigint >> 16) & 255,
+            g: (bigint >> 8) & 255,
+            b: bigint & 255
+        };
     }
 
     // =========================================================================
-    // 1. Parâmetros e Constantes
-    // =========================================================================
-
-    const pluginName = "DayNightSystem";
-    const params = PluginManager.parameters(pluginName);
-
-    const secondsPerGameMinute = Math.max(0.01, Number(params['SecondsPerGameMinute'] || 1.0));
-    const defaultStartHour = Number(params['StartHour'] !== undefined ? params['StartHour'] : 8);
-    const defaultStartMinute = Number(params['StartMinute'] !== undefined ? params['StartMinute'] : 0);
-    const timeSpeedVarId = Number(params['TimeSpeedVariable'] || 0);
-
-    const gameMinuteVarId = Number(params['GameMinuteVariableId'] || 0);
-    const gameHourVarId = Number(params['GameHourVariableId'] || 0);
-    const gameDayVarId = Number(params['GameDayVariableId'] || 0);
-    const isNightSwitchId = Number(params['IsNightSwitchId'] || 0);
-    const startMoonPhase = Number(params['StartMoonPhase'] !== undefined ? params['StartMoonPhase'] : 2);
-    const moonPhaseVarId = Number(params['MoonPhaseVariableId'] || 0);
-
-    const showClockHud = String(params['ShowClockHud'] || 'true') === 'true';
-    const clockX = Number(params['ClockX'] || 20);
-    const clockY = Number(params['ClockY'] || 150);
-
-    const playerLanternEnabled = String(params['PlayerLanternEnabled'] || 'true') === 'true';
-    const playerLanternRadius = Number(params['PlayerLanternRadius'] || 100);
-
-    const enableDynamicShadows = String(params['EnableDynamicShadows'] !== undefined ? params['EnableDynamicShadows'] : 'true') === 'true';
-    const enableTileShadows = String(params['EnableTileShadows'] !== undefined ? params['EnableTileShadows'] : 'true') === 'true';
-    const maxShadowLength = Number(params['MaxShadowLength'] || 24);
-    const shadowOpacity = Number(params['ShadowOpacity'] !== undefined ? params['ShadowOpacity'] : 0.45);
-    const tileShadowOpacity = Number(params['TileShadowOpacity'] !== undefined ? params['TileShadowOpacity'] : 0.40);
-    const enableFlameFlicker = String(params['EnableFlameFlicker'] !== undefined ? params['EnableFlameFlicker'] : 'true') === 'true';
-    const enableNaturalColorGrading = String(params['EnableNaturalColorGrading'] !== undefined ? params['EnableNaturalColorGrading'] : 'true') === 'true';
-    const enableSoftShadows = String(params['EnableSoftShadows'] !== undefined ? params['EnableSoftShadows'] : 'true') === 'true';
-    const shadowBlur = Number(params['ShadowBlur'] || 1.5);
-    const shadowBlendMode = Number(params['ShadowBlendMode'] !== undefined ? params['ShadowBlendMode'] : 2); // 2 = MULTIPLY
-    const canopyHeightOffset = Number(params['CanopyHeightOffset'] !== undefined ? params['CanopyHeightOffset'] : 0.00);
-    const enableContactShadow = String(params['EnableContactShadow'] !== undefined ? params['EnableContactShadow'] : 'true') === 'true';
-    const contactShadowOpacity = Number(params['ContactShadowOpacity'] !== undefined ? params['ContactShadowOpacity'] : 0.55);
-
-    let _sharedContactShadowBitmap = null;
-
-    const MOON_PHASES = [
-        { index: 0, name: "Lua Nova",         illumination: 0.00 },
-        { index: 1, name: "Lua Crescente",    illumination: 0.22 },
-        { index: 2, name: "Quarto Crescente", illumination: 0.50 },
-        { index: 3, name: "Crescente Gibosa", illumination: 0.78 },
-        { index: 4, name: "Lua Cheia",        illumination: 1.00 },
-        { index: 5, name: "Minguante Gibosa", illumination: 0.78 },
-        { index: 6, name: "Quarto Minguante", illumination: 0.50 },
-        { index: 7, name: "Lua Minguante",    illumination: 0.22 }
-    ];
-
-    const AMBIENT_LIGHT_SCHEDULE = [
-        { hour: 0,  r: 2,   g: 4,   b: 12,  alpha: 0.93, kelvin: 12000, label: "Madrugada" },
-        { hour: 3,  r: 2,   g: 4,   b: 12,  alpha: 0.93, kelvin: 12000, label: "Madrugada" },
-        { hour: 4,  r: 6,   g: 9,   b: 22,  alpha: 0.86, kelvin: 10000, label: "Alvorada" },
-        { hour: 5,  r: 55,  g: 30,  b: 55,  alpha: 0.62, kelvin: 2000,  label: "Amanhecer" },
-        { hour: 6,  r: 195, g: 105, b: 60,  alpha: 0.28, kelvin: 2600,  label: "Aurora Dourada" },
-        { hour: 7,  r: 240, g: 185, b: 125, alpha: 0.10, kelvin: 3800,  label: "Manhã" },
-        { hour: 8,  r: 255, g: 245, b: 235, alpha: 0.00, kelvin: 5500,  label: "Manhã" },
-        { hour: 11, r: 255, g: 255, b: 255, alpha: 0.00, kelvin: 6500,  label: "Dia (Zênite)" },
-        { hour: 13, r: 255, g: 255, b: 255, alpha: 0.00, kelvin: 6500,  label: "Dia" },
-        { hour: 16, r: 250, g: 225, b: 175, alpha: 0.04, kelvin: 4800,  label: "Tarde" },
-        { hour: 17, r: 245, g: 145, b: 65,  alpha: 0.22, kelvin: 2800,  label: "Golden Hour" },
-        { hour: 18, r: 180, g: 65,  b: 48,  alpha: 0.48, kelvin: 2100,  label: "Pôr do Sol" },
-        { hour: 19, r: 42,  g: 22,  b: 52,  alpha: 0.75, kelvin: 8500,  label: "Crepúsculo" },
-        { hour: 20, r: 4,   g: 7,   b: 18,  alpha: 0.90, kelvin: 11000, label: "Noite" },
-        { hour: 22, r: 2,   g: 4,   b: 12,  alpha: 0.93, kelvin: 12000, label: "Noite" },
-        { hour: 24, r: 2,   g: 4,   b: 12,  alpha: 0.93, kelvin: 12000, label: "Madrugada" }
-    ];
-
-    // =========================================================================
-    // 2. Comandos de Plugin (Plugin Commands do MZ)
+    // 2. Comandos de Plugin
     // =========================================================================
 
     PluginManager.registerCommand(pluginName, "setTime", args => {
-        const hour = Number(args.hour || 0);
-        const minute = Number(args.minute || 0);
-        $gameSystem.setTime(hour, minute);
+        const h = Number(args.hour || 0);
+        const m = Number(args.minute || 0);
+        if ($gameSystem) $gameSystem.setTime(h, m);
     });
 
     PluginManager.registerCommand(pluginName, "addTime", args => {
-        const hours = Number(args.hours || 0);
-        const minutes = Number(args.minutes || 0);
-        $gameSystem.addTime(hours, minutes);
+        const h = Number(args.hours || 0);
+        const m = Number(args.minutes || 0);
+        if ($gameSystem) $gameSystem.addTime(h, m);
     });
 
-    PluginManager.registerCommand(pluginName, "setTimePaused", args => {
-        const paused = String(args.paused || 'true') === 'true';
-        $gameSystem.setTimePaused(paused);
+    PluginManager.registerCommand(pluginName, "pauseTime", args => {
+        const p = String(args.pause) === 'true';
+        if ($gameSystem) $gameSystem.setTimePaused(p);
     });
 
-    PluginManager.registerCommand(pluginName, "setIndoorMode", args => {
-        const indoor = String(args.indoor || 'true') === 'true';
-        $gameSystem.setDayNightIndoor(indoor);
+    PluginManager.registerCommand(pluginName, "SetTimeSpeed", args => {
+        const speed = Math.max(1, Number(args.speed || 24));
+        if ($gameSystem) $gameSystem.setTimeSpeed(speed);
     });
 
     PluginManager.registerCommand(pluginName, "setMoonPhase", args => {
-        const phase = Number(args.phase || 0);
-        $gameSystem.setMoonPhase(phase);
+        const phase = Math.max(0, Math.min(7, Number(args.phase || 0)));
+        if ($gameSystem) $gameSystem.setMoonPhase(phase);
     });
 
     // =========================================================================
-    // 3. Game_System - Armazenamento de Estado, Ciclo de Tempo & Fases da Lua
+    // 3. Game_System - Gerenciamento do Tempo e Estado Global
     // =========================================================================
 
     const _Game_System_initialize = Game_System.prototype.initialize;
     Game_System.prototype.initialize = function() {
-        if (_Game_System_initialize) {
-            _Game_System_initialize.call(this);
-        }
-        this._dayNightTotalSeconds = (defaultStartHour * 3600) + (defaultStartMinute * 60);
-        this._dayNightDayCount = 1;
-        this._dayNightMoonPhase = ((startMoonPhase % 8) + 8) % 8;
-        this._dayNightPaused = false;
-        this._dayNightIndoorOverride = null;
+        _Game_System_initialize.call(this);
+        this.initDayNightSystem();
     };
 
-    Game_System.prototype.dayNightTotalMinutes = function() {
-        return Math.floor(this._dayNightTotalSeconds / 60);
+    Game_System.prototype.initDayNightSystem = function() {
+        if (this._dayNightTotalMinutes === undefined) {
+            this._dayNightTotalMinutes = defaultStartHour * 60 + defaultStartMinute;
+        }
+        if (this._dayNightDays === undefined) {
+            this._dayNightDays = 1;
+        }
+        if (this._dayNightPaused === undefined) {
+            this._dayNightPaused = false;
+        }
+        if (this._dayNightSpeedMinutes === undefined) {
+            this._dayNightSpeedMinutes = defaultDayDuration;
+        }
+        if (this._dayNightMoonPhase === undefined) {
+            this._dayNightMoonPhase = startMoonPhase;
+        }
     };
 
     Game_System.prototype.dayNightHour = function() {
-        return Math.floor(this.dayNightTotalMinutes() / 60) % 24;
+        this.initDayNightSystem();
+        return Math.floor(this._dayNightTotalMinutes / 60) % 24;
     };
 
     Game_System.prototype.dayNightMinute = function() {
-        return this.dayNightTotalMinutes() % 60;
+        this.initDayNightSystem();
+        return Math.floor(this._dayNightTotalMinutes) % 60;
+    };
+
+    Game_System.prototype.dayNightTotalMinutes = function() {
+        this.initDayNightSystem();
+        return this._dayNightTotalMinutes;
     };
 
     Game_System.prototype.dayNightDay = function() {
-        return this._dayNightDayCount;
+        this.initDayNightSystem();
+        return this._dayNightDays;
     };
 
     Game_System.prototype.dayNightMoonPhase = function() {
-        if (this._dayNightMoonPhase === undefined || this._dayNightMoonPhase === null) {
-            this._dayNightMoonPhase = ((startMoonPhase + (this._dayNightDayCount || 1) - 1) % 8 + 8) % 8;
-        }
+        this.initDayNightSystem();
         return this._dayNightMoonPhase;
     };
 
     Game_System.prototype.dayNightMoonName = function() {
-        const phase = this.dayNightMoonPhase();
-        return MOON_PHASES[phase] ? MOON_PHASES[phase].name : "Quarto Crescente";
+        return getMoonPhaseData(this.dayNightMoonPhase()).name;
     };
 
-    Game_System.prototype.setMoonPhase = function(phaseIndex) {
-        this._dayNightMoonPhase = ((Math.floor(Number(phaseIndex) || 0) % 8) + 8) % 8;
-        this.updateDayNightVariables();
+    Game_System.prototype.setMoonPhase = function(phase) {
+        this.initDayNightSystem();
+        this._dayNightMoonPhase = ((Math.floor(Number(phase) || 0) % 8) + 8) % 8;
+        this.syncDayNightVariables();
     };
 
     Game_System.prototype.isNight = function() {
         const h = this.dayNightHour();
-        return h >= 20 || h < 5;
+        return h >= 19 || h < 6;
     };
 
     Game_System.prototype.setTime = function(hour, minute) {
+        this.initDayNightSystem();
         const h = Math.max(0, Math.min(23, Number(hour) || 0));
         const m = Math.max(0, Math.min(59, Number(minute) || 0));
-        const days = Math.floor(this._dayNightTotalSeconds / 86400);
-        this._dayNightTotalSeconds = (days * 86400) + (h * 3600) + (m * 60);
-        this.updateDayNightVariables();
+        this._dayNightTotalMinutes = h * 60 + m;
+        this.syncDayNightVariables();
     };
 
     Game_System.prototype.addTime = function(hours, minutes) {
-        const addSec = (Number(hours || 0) * 3600) + (Number(minutes || 0) * 60);
-        const prevDay = Math.floor(this._dayNightTotalSeconds / 86400);
-        const prevLunarCycle = Math.floor((this._dayNightTotalSeconds - 21600) / 86400);
-
-        this._dayNightTotalSeconds += addSec;
-
-        const currDay = Math.floor(this._dayNightTotalSeconds / 86400);
-        const currLunarCycle = Math.floor((this._dayNightTotalSeconds - 21600) / 86400);
-
-        if (currDay > prevDay) {
-            this._dayNightDayCount += (currDay - prevDay);
+        this.initDayNightSystem();
+        const totalToAdd = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+        this._dayNightTotalMinutes += totalToAdd;
+        while (this._dayNightTotalMinutes >= 1440) {
+            this._dayNightTotalMinutes -= 1440;
+            this._dayNightDays++;
+            this._dayNightMoonPhase = (this._dayNightMoonPhase + 1) % 8;
         }
-        if (currLunarCycle > prevLunarCycle) {
-            this._dayNightMoonPhase = (this.dayNightMoonPhase() + (currLunarCycle - prevLunarCycle)) % 8;
+        while (this._dayNightTotalMinutes < 0) {
+            this._dayNightTotalMinutes += 1440;
+            this._dayNightDays = Math.max(1, this._dayNightDays - 1);
+            this._dayNightMoonPhase = (this._dayNightMoonPhase + 7) % 8;
         }
-        this.updateDayNightVariables();
+        this.syncDayNightVariables();
     };
 
     Game_System.prototype.setTimePaused = function(paused) {
+        this.initDayNightSystem();
         this._dayNightPaused = !!paused;
     };
 
+    Game_System.prototype.setTimeSpeed = function(minutesPerDay) {
+        this.initDayNightSystem();
+        this._dayNightSpeedMinutes = Math.max(1, Number(minutesPerDay) || defaultDayDuration);
+    };
+
     Game_System.prototype.isTimePaused = function() {
-        return !!this._dayNightPaused;
-    };
-
-    Game_System.prototype.setDayNightIndoor = function(isIndoor) {
-        this._dayNightIndoorOverride = isIndoor;
-    };
-
-    Game_System.prototype.isDayNightIndoor = function() {
-        if (this._dayNightIndoorOverride !== null && this._dayNightIndoorOverride !== undefined) {
-            return this._dayNightIndoorOverride;
+        this.initDayNightSystem();
+        if (this._dayNightPaused) return true;
+        if (timeSwitchPause > 0 && $gameSwitches && $gameSwitches.value(timeSwitchPause)) {
+            return true;
         }
-        if (typeof $dataMap !== 'undefined' && $dataMap && $dataMap.meta) {
-            if ($dataMap.meta.indoor) return true;
-            if ($dataMap.meta.outdoor) return false;
-        }
+        if ($gameMessage && $gameMessage.isBusy()) return true;
+        if ($gameMap && $gameMap.isEventRunning()) return true;
         return false;
     };
 
-    Game_System.prototype.updateDayNightTime = function(deltaRealSeconds) {
-        if (this._dayNightPaused) return;
+    Game_System.prototype.updateDayNight = function() {
+        if (this.isTimePaused()) return;
 
-        let multiplier = 1.0;
-        if (timeSpeedVarId > 0 && typeof $gameVariables !== 'undefined' && $gameVariables) {
-            const v = $gameVariables.value(timeSpeedVarId);
-            if (v >= 0) multiplier = v;
+        const realFramesPerDay = this._dayNightSpeedMinutes * 60 * 60;
+        const gameMinutesPerFrame = 1440 / realFramesPerDay;
+
+        const prevMinute = Math.floor(this._dayNightTotalMinutes);
+        this._dayNightTotalMinutes += gameMinutesPerFrame;
+
+        if (this._dayNightTotalMinutes >= 1440) {
+            this._dayNightTotalMinutes -= 1440;
+            this._dayNightDays++;
+            this._dayNightMoonPhase = (this._dayNightMoonPhase + 1) % 8;
         }
 
-        const gameSecondsPerRealSecond = 60 / secondsPerGameMinute;
-        const advanceSec = deltaRealSeconds * gameSecondsPerRealSecond * multiplier;
-
-        const prevDay = Math.floor(this._dayNightTotalSeconds / 86400);
-        const prevLunarCycle = Math.floor((this._dayNightTotalSeconds - 21600) / 86400);
-
-        this._dayNightTotalSeconds += advanceSec;
-
-        const currDay = Math.floor(this._dayNightTotalSeconds / 86400);
-        const currLunarCycle = Math.floor((this._dayNightTotalSeconds - 21600) / 86400);
-
-        if (currDay > prevDay) {
-            this._dayNightDayCount += (currDay - prevDay);
+        const currentMinute = Math.floor(this._dayNightTotalMinutes);
+        if (currentMinute !== prevMinute) {
+            this.syncDayNightVariables();
         }
-        if (currLunarCycle > prevLunarCycle) {
-            this._dayNightMoonPhase = (this.dayNightMoonPhase() + (currLunarCycle - prevLunarCycle)) % 8;
-        }
-
-        this.updateDayNightVariables();
     };
 
-    Game_System.prototype.updateDayNightVariables = function() {
-        if (typeof $gameVariables === 'undefined' || !$gameVariables) return;
+    Game_System.prototype.syncDayNightVariables = function() {
+        if (!$gameVariables || !$gameSwitches) return;
 
         const h = this.dayNightHour();
         const m = this.dayNightMinute();
-        const moonPhase = this.dayNightMoonPhase();
+        const d = this.dayNightDay();
+        const lightInfo = getAmbientLightForTime(this._dayNightTotalMinutes);
 
-        if (gameMinuteVarId > 0 && $gameVariables.value(gameMinuteVarId) !== m) {
-            $gameVariables.setValue(gameMinuteVarId, m);
-        }
-        if (gameHourVarId > 0 && $gameVariables.value(gameHourVarId) !== h) {
-            $gameVariables.setValue(gameHourVarId, h);
-        }
-        if (gameDayVarId > 0 && $gameVariables.value(gameDayVarId) !== this._dayNightDayCount) {
-            $gameVariables.setValue(gameDayVarId, this._dayNightDayCount);
-        }
-        if (moonPhaseVarId > 0 && $gameVariables.value(moonPhaseVarId) !== moonPhase) {
-            $gameVariables.setValue(moonPhaseVarId, moonPhase);
-        }
-        if (isNightSwitchId > 0 && typeof $gameSwitches !== 'undefined' && $gameSwitches) {
-            const night = this.isNight();
-            if ($gameSwitches.value(isNightSwitchId) !== night) {
-                $gameSwitches.setValue(isNightSwitchId, night);
-            }
-        }
+        if (hourVariableId > 0) $gameVariables.setValue(hourVariableId, h);
+        if (minuteVariableId > 0) $gameVariables.setValue(minuteVariableId, m);
+        if (dayVariableId > 0) $gameVariables.setValue(dayVariableId, d);
+        if (periodVariableId > 0) $gameVariables.setValue(periodVariableId, lightInfo.period);
+        if (moonPhaseVariableId > 0) $gameVariables.setValue(moonPhaseVariableId, this.dayNightMoonPhase());
+        if (isNightSwitchId > 0) $gameSwitches.setValue(isNightSwitchId, this.isNight());
     };
 
-    const _Scene_Map_update = Scene_Map.prototype.update;
-    Scene_Map.prototype.update = function() {
-        _Scene_Map_update.call(this);
-        if ($gameSystem && $gameSystem.updateDayNightTime) {
-            $gameSystem.updateDayNightTime(1 / 60);
+    Game_System.prototype.isDayNightIndoor = function() {
+        if (!$dataMap || !$dataMap.note) return false;
+        const note = $dataMap.note;
+        return /<(?:NoDayNight|Indoor)>/i.test(note);
+    };
+
+    Game_System.prototype.getMapAmbientDarkness = function() {
+        if (!$dataMap || !$dataMap.note) return null;
+        const match = $dataMap.note.match(/<AmbientDarkness:\s*(\d+)>/i);
+        if (match) {
+            return Math.max(0, Math.min(100, Number(match[1]))) / 100;
         }
+        return null;
+    };
+
+    Game_System.prototype.isMapSunless = function() {
+        if (!$dataMap || !$dataMap.note) return false;
+        if (/<Sunless>/i.test($dataMap.note)) return true;
+        return this.getMapAmbientDarkness() !== null;
     };
 
     // =========================================================================
-    // 4. Detecção de Fontes de Luz em Eventos (<light: radius, color>)
+    // 4. Detecção de Fontes de Luz e Tags de Sombra em Eventos (Game_Event)
     // =========================================================================
 
-    Game_Event.prototype.dayNightLightData = function() {
-        if (!this.page()) return null;
+    const LIGHT_PRESETS = {
+        torch:   { radius: 155, color: '#ff9933', flicker: true,  intensity: 1.0 },
+        tocha:   { radius: 155, color: '#ff9933', flicker: true,  intensity: 1.0 },
+        fire:    { radius: 185, color: '#ff7722', flicker: true,  intensity: 1.1 },
+        fogo:    { radius: 185, color: '#ff7722', flicker: true,  intensity: 1.1 },
+        bonfire: { radius: 235, color: '#ff6611', flicker: true,  intensity: 1.2 },
+        fogueira:{ radius: 235, color: '#ff6611', flicker: true,  intensity: 1.2 },
+        lantern: { radius: 165, color: '#ffcc66', flicker: false, intensity: 0.95 },
+        lanterna:{ radius: 165, color: '#ffcc66', flicker: false, intensity: 0.95 },
+        crystal: { radius: 145, color: '#55eeff', flicker: false, intensity: 0.95 },
+        cristal: { radius: 145, color: '#55eeff', flicker: false, intensity: 0.95 },
+        candle:  { radius: 95,  color: '#ffbb55', flicker: true,  intensity: 0.85 },
+        vela:    { radius: 95,  color: '#ffbb55', flicker: true,  intensity: 0.85 }
+    };
 
-        const list = this.list();
-        if (list) {
-            for (let i = 0; i < list.length; i++) {
-                if (list[i].code === 108 || list[i].code === 408) {
-                    const match = list[i].parameters[0].match(/<light:\s*(\d+)(?:,\s*([#a-zA-Z0-9]+))?>/i);
-                    if (match) {
-                        return {
-                            radius: Number(match[1]),
-                            color: match[2] || '#ffcc66'
-                        };
+    function parseLightTagFromText(text) {
+        if (!text) return null;
+
+        const customMatch = text.match(/<light:\s*(\d+)\s*(?:,\s*([#a-zA-Z0-9]+))?\s*(?:,\s*(flicker))?\s*>/i);
+        if (customMatch) {
+            return {
+                radius: Number(customMatch[1]) || 140,
+                color: customMatch[2] || '#ffbb66',
+                flicker: Boolean(customMatch[3]),
+                intensity: 1.0
+            };
+        }
+
+        const presetMatch = text.match(/<(torch|tocha|fire|fogo|bonfire|fogueira|lantern|lanterna|crystal|cristal|candle|vela)>/i);
+        if (presetMatch) {
+            const key = presetMatch[1].toLowerCase();
+            return Object.assign({}, LIGHT_PRESETS[key]);
+        }
+
+        return null;
+    }
+
+    function parseNoShadowTagFromText(text) {
+        if (!text) return false;
+        return /<(?:noShadow|semSombra)>/i.test(text);
+    }
+
+    const _Game_Event_setupPage = Game_Event.prototype.setupPage;
+    Game_Event.prototype.setupPage = function() {
+        _Game_Event_setupPage.call(this);
+        this.refreshDayNightLightData();
+    };
+
+    Game_Event.prototype.refreshDayNightLightData = function() {
+        this._dayNightLightData = null;
+        this._dayNightNoShadow = false;
+        const ev = this.event();
+        if (!ev) return;
+
+        if (parseNoShadowTagFromText(ev.note)) {
+            this._dayNightNoShadow = true;
+        }
+
+        if (this.page() && this.list()) {
+            for (const cmd of this.list()) {
+                if (cmd.code === 108 || cmd.code === 408) {
+                    const comment = cmd.parameters[0];
+                    if (parseNoShadowTagFromText(comment)) {
+                        this._dayNightNoShadow = true;
+                    }
+                    const parsed = parseLightTagFromText(comment);
+                    if (parsed) {
+                        this._dayNightLightData = parsed;
+                        this._dayNightLightSeed = (this.eventId() * 137) % 1000;
+                        return;
                     }
                 }
             }
         }
 
-        const eventData = this.event();
-        if (eventData && eventData.meta && eventData.meta.light) {
-            const raw = String(eventData.meta.light);
-            const parts = raw.split(',');
-            return {
-                radius: Number(parts[0]) || 80,
-                color: (parts[1] || '#ffcc66').trim()
-            };
+        const noteLight = parseLightTagFromText(ev.note);
+        if (noteLight) {
+            this._dayNightLightData = noteLight;
+            this._dayNightLightSeed = (this.eventId() * 137) % 1000;
         }
+    };
 
-        return null;
+    Game_Event.prototype.getDayNightLightData = function() {
+        if (this._dayNightLightData === undefined) {
+            this.refreshDayNightLightData();
+        }
+        return this._dayNightLightData;
+    };
+
+    Game_Event.prototype.hasNoSunShadow = function() {
+        if (this._dayNightNoShadow === undefined) {
+            this.refreshDayNightLightData();
+        }
+        return Boolean(this._dayNightNoShadow);
     };
 
     // =========================================================================
-    // 5. Spriteset_Map - Máscara de Iluminação Ambiente e Luzes Dinâmicas
+    // 5. Camadas de Iluminação HD-2D, Bloom Aditivo e Sombras de Estruturas
     // =========================================================================
 
     const _Spriteset_Map_createLowerLayer = Spriteset_Map.prototype.createLowerLayer;
     Spriteset_Map.prototype.createLowerLayer = function() {
         _Spriteset_Map_createLowerLayer.call(this);
-        this.createDayNightShadowOverlay();
-        this.createDayNightLightingOverlay();
+        this.createDayNightTileShadows();
+        this.createDayNightOverlay();
     };
 
-    Spriteset_Map.prototype.createDayNightShadowOverlay = function() {
-        this._dayNightTileShadowBitmap = new Bitmap(Graphics.width, Graphics.height);
+    Spriteset_Map.prototype.createDayNightTileShadows = function() {
+        const width = Graphics.width;
+        const height = Graphics.height;
+
+        // Bitmap final exibido no Tilemap em z = 1.5 (acima do chão z=0, abaixo de personagens z=3 e copas '*' z=4)
+        this._dayNightTileShadowBitmap = new Bitmap(width, height);
+        // Único buffer de trabalho offscreen para composição sem costuras via 'source-in'
+        this._shadowWorkBitmap = new Bitmap(width, height);
+
         this._dayNightTileShadowSprite = new Sprite(this._dayNightTileShadowBitmap);
-        this._dayNightTileShadowSprite.z = 2; // Acima dos tiles de chão, abaixo dos personagens (z=3+)
+        this._dayNightTileShadowSprite.z = 1.5;
+        this._tilemap.addChild(this._dayNightTileShadowSprite);
 
-        if (typeof document !== 'undefined') {
-            this._dayNightCastersCanvas = document.createElement('canvas');
-            this._dayNightCastersCanvas.width = Graphics.width;
-            this._dayNightCastersCanvas.height = Graphics.height;
-            this._dayNightCastersCtx = this._dayNightCastersCanvas.getContext('2d');
-
-            this._dayNightCanopyCanvas = document.createElement('canvas');
-            this._dayNightCanopyCanvas.width = Graphics.width;
-            this._dayNightCanopyCanvas.height = Graphics.height;
-            this._dayNightCanopyCtx = this._dayNightCanopyCanvas.getContext('2d');
-
-            this._dayNightCutoutCanvas = document.createElement('canvas');
-            this._dayNightCutoutCanvas.width = Graphics.width;
-            this._dayNightCutoutCanvas.height = Graphics.height;
-            this._dayNightCutoutCtx = this._dayNightCutoutCanvas.getContext('2d');
-        }
-
-        if (shadowBlendMode === 2 && typeof PIXI !== 'undefined' && PIXI.BLEND_MODES) {
-            this._dayNightTileShadowSprite.blendMode = PIXI.BLEND_MODES.MULTIPLY;
-        }
-
-        if (enableSoftShadows && typeof PIXI !== 'undefined' && PIXI.filters && PIXI.filters.BlurFilter) {
-            this._dayNightShadowBlurFilter = new PIXI.filters.BlurFilter();
-            this._dayNightShadowBlurFilter.blur = shadowBlur;
-            this._dayNightShadowBlurFilter.quality = 2;
-            this._dayNightTileShadowSprite.filters = [this._dayNightShadowBlurFilter];
-        }
-
-        if (this._tilemap) {
-            this._tilemap.addChild(this._dayNightTileShadowSprite);
-        } else {
-            this._baseSprite.addChild(this._dayNightTileShadowSprite);
-        }
-
-        this._characterShadowContainer = (typeof PIXI !== 'undefined' && PIXI.Container) ? new PIXI.Container() : new Sprite();
-        this._characterShadowContainer.z = 2.5;
-        if (this._tilemap) {
-            this._tilemap.addChild(this._characterShadowContainer);
-        } else {
-            this._baseSprite.addChild(this._characterShadowContainer);
-        }
+        this._lastShadowState = null;
     };
 
-    Spriteset_Map.prototype.createDayNightLightingOverlay = function() {
-        this._dayNightOverlayBitmap = new Bitmap(Graphics.width, Graphics.height);
+    Spriteset_Map.prototype.createDayNightOverlay = function() {
+        const width = Graphics.width;
+        const height = Graphics.height;
+
+        // 1. Camada de Ambiência & Escuridão Noturna (com recortes suaves destination-out)
+        this._dayNightOverlayBitmap = new Bitmap(width, height);
         this._dayNightOverlaySprite = new Sprite(this._dayNightOverlayBitmap);
+        this._dayNightOverlaySprite.blendMode = PIXI.BLEND_MODES.NORMAL;
         this._dayNightOverlaySprite.z = 8;
-        this._baseSprite.addChild(this._dayNightOverlaySprite);
+        this.addChild(this._dayNightOverlaySprite);
+
+        // 2. Camada Separada de Bloom Aditivo (PIXI.BLEND_MODES.ADD) para brilho real de tochas/cristais/lanternas
+        this._dayNightBloomBitmap = new Bitmap(width, height);
+        this._dayNightBloomSprite = new Sprite(this._dayNightBloomBitmap);
+        this._dayNightBloomSprite.blendMode = PIXI.BLEND_MODES.ADD;
+        this._dayNightBloomSprite.z = 8.5;
+        this.addChild(this._dayNightBloomSprite);
     };
 
     const _Spriteset_Map_update = Spriteset_Map.prototype.update;
@@ -1062,472 +868,672 @@
         this.updateDayNightLighting();
     };
 
-    Spriteset_Map.prototype.drawTileToCanvasContext = function(targetCtx, tileId, dx, dy) {
-        if (!this._tilemap || !this._tilemap._bitmaps || !this._tilemap._addTile) return false;
-        let drawn = false;
-        const bitmaps = this._tilemap._bitmaps;
-        const proxyLayer = {
-            addRect: function(setNumber, sx, sy, rdx, rdy, w, h) {
-                const bmp = bitmaps[setNumber];
-                if (bmp && bmp.isReady()) {
-                    const imgSource = bmp._canvas || bmp._image;
-                    if (imgSource) {
-                        targetCtx.drawImage(imgSource, sx, sy, w, h, rdx, rdy, w, h);
-                        drawn = true;
-                    }
-                }
-            }
-        };
-        this._tilemap._addTile(proxyLayer, tileId, dx, dy);
-        return drawn;
+    // -------------------------------------------------------------------------
+    // 5.1 Desenho Preciso de Tiles RMMZ (Autotiles A1-A4, Normal A5, B/C/D/E)
+    // -------------------------------------------------------------------------
+
+    Spriteset_Map.prototype.drawSingleTileToContext = function(ctx, bitmap, tileId, dx, dy) {
+        if (!bitmap || !bitmap.isReady()) return;
+        const tileWidth = $gameMap.tileWidth();
+        const tileHeight = $gameMap.tileHeight();
+
+        if (Tilemap.isAutotile(tileId)) {
+            this.drawAutotileToContext(ctx, bitmap, tileId, dx, dy, tileWidth, tileHeight);
+        } else {
+            this.drawNormalTileToContext(ctx, bitmap, tileId, dx, dy, tileWidth, tileHeight);
+        }
     };
 
-    /**
-     * Renderiza sombras com silhueta 100% fiel ao formato real dos tiles (montanhas, árvores, torres, prédios).
-     * Unifica estruturas de múltiplos tiles verticais (base + topo), aplica atenuação por distância
-     * e dissolve sombras sob fontes de luz locais.
-     */
+    Spriteset_Map.prototype.drawNormalTileToContext = function(ctx, bitmap, tileId, dx, dy, w, h) {
+        const sx = ((Math.floor(tileId / 128) % 2) * 8 + (tileId % 8)) * w;
+        const sy = (Math.floor((tileId % 256) / 8) % 16) * h;
+        const source = bitmap._image || bitmap._canvas || bitmap.canvas;
+        if (source) {
+            ctx.drawImage(source, sx, sy, w, h, dx, dy, w, h);
+        }
+    };
+
+    Spriteset_Map.prototype.drawAutotileToContext = function(ctx, bitmap, tileId, dx, dy, w, h) {
+        const kind = Tilemap.getAutotileKind(tileId);
+        const shape = Tilemap.getAutotileShape(tileId);
+        const tx = kind % 8;
+        const ty = Math.floor(kind / 8);
+
+        let bx = 0;
+        let by = 0;
+        let autotileTable = Tilemap.FLOOR_AUTOTILE_TABLE;
+
+        if (Tilemap.isTileA1(tileId)) {
+            return;
+        } else if (Tilemap.isTileA2(tileId)) {
+            bx = tx * 2;
+            by = (ty - 2) * 3;
+        } else if (Tilemap.isTileA3(tileId)) {
+            bx = tx * 2;
+            by = (ty - 6) * 2;
+            autotileTable = Tilemap.WALL_AUTOTILE_TABLE;
+        } else if (Tilemap.isTileA4(tileId)) {
+            bx = tx * 2;
+            by = Math.floor((ty - 10) * 2.5 + (ty % 2 === 1 ? 0.5 : 0));
+            if (ty % 2 === 1) {
+                autotileTable = Tilemap.WALL_AUTOTILE_TABLE;
+            }
+        }
+
+        const table = autotileTable[shape];
+        if (!table) return;
+
+        const w1 = w / 2;
+        const h1 = h / 2;
+        const source = bitmap._image || bitmap._canvas || bitmap.canvas;
+        if (!source) return;
+
+        for (let i = 0; i < 4; i++) {
+            const qsx = table[i][0];
+            const qsy = table[i][1];
+            const sx1 = (bx * 2 + qsx) * w1;
+            const sy1 = (by * 2 + qsy) * h1;
+            const dx1 = dx + (i % 2) * w1;
+            const dy1 = dy + Math.floor(i / 2) * h1;
+            ctx.drawImage(source, sx1, sy1, w1, h1, dx1, dy1, w1, h1);
+        }
+    };
+
+    Spriteset_Map.prototype.getTilesetBitmapForTile = function(tileId) {
+        if (!this._tilemap) return null;
+        const bitmaps = this._tilemap._bitmaps || this._tilemap.bitmaps;
+        if (!bitmaps) return null;
+        let setNumber = 0;
+        if (Tilemap.isTileA1(tileId)) setNumber = 0;
+        else if (Tilemap.isTileA2(tileId)) setNumber = 1;
+        else if (Tilemap.isTileA3(tileId)) setNumber = 2;
+        else if (Tilemap.isTileA4(tileId)) setNumber = 3;
+        else if (Tilemap.isTileA5(tileId)) setNumber = 4;
+        else setNumber = 5 + Math.floor(tileId / 256);
+        return bitmaps[setNumber] || null;
+    };
+
+    // -------------------------------------------------------------------------
+    // 5.2 Projeção Coerente de Sombras de Estruturas (Sem Costuras 48x48)
+    // -------------------------------------------------------------------------
+
     Spriteset_Map.prototype.updateDayNightTileShadows = function() {
-        if (!this._dayNightTileShadowBitmap || !this._dayNightTileShadowSprite) return;
+        if (!this._dayNightTileShadowSprite || !this._dayNightTileShadowBitmap || !$gameSystem || !$gameMap) return;
+        if (!this._tilemap || (this._tilemap.isReady && !this._tilemap.isReady())) return;
 
-        const ctx = this._dayNightTileShadowBitmap.context;
-        const w = Graphics.width;
-        const h = Graphics.height;
-
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, w, h);
-
-        if (!enableTileShadows) {
+        if (!enableDynamicShadows || !enableTileShadows || $gameSystem.isDayNightIndoor() || $gameSystem.isMapSunless()) {
             this._dayNightTileShadowSprite.visible = false;
-            this._dayNightTileShadowBitmap._baseTexture.update();
+            this._lastShadowState = null;
             return;
         }
 
-        if (typeof $gameSystem !== 'undefined' && $gameSystem && $gameSystem.isDayNightIndoor()) {
+        const totalMinutes = $gameSystem.dayNightTotalMinutes();
+        const sunData = getSolarShadowTransform(totalMinutes);
+        if (sunData.opacity <= 0.01) {
             this._dayNightTileShadowSprite.visible = false;
-            this._dayNightTileShadowBitmap._baseTexture.update();
+            this._lastShadowState = null;
             return;
         }
 
-        const totalMinutes = (typeof $gameSystem !== 'undefined' && $gameSystem) ? $gameSystem.dayNightTotalMinutes() : 720;
-        const sunData = getSunShadowVectorForTime(totalMinutes);
+        const flags = $gameMap.tilesetFlags();
+        if (!flags) return;
 
-        if (!sunData.visible) {
-            this._dayNightTileShadowSprite.visible = false;
-            this._dayNightTileShadowBitmap._baseTexture.update();
+        const displayX = $gameMap.displayX();
+        const displayY = $gameMap.displayY();
+        const mapId = $gameMap.mapId();
+        const lightInfo = getAmbientLightForTime(totalMinutes);
+
+        // Cache inteligente: atualiza imediatamente se a câmera moveu, ou quando o ângulo solar muda perceptivelmente
+        const prev = this._lastShadowState;
+        if (
+            prev &&
+            prev.mapId === mapId &&
+            Math.abs(prev.displayX - displayX) < 0.0005 &&
+            Math.abs(prev.displayY - displayY) < 0.0005 &&
+            Math.abs(prev.sx - sunData.sx) < 0.003 &&
+            Math.abs(prev.sy - sunData.sy) < 0.003 &&
+            Math.abs(prev.opacity - sunData.opacity) < 0.004
+        ) {
             return;
         }
+
+        this._lastShadowState = {
+            mapId,
+            displayX,
+            displayY,
+            sx: sunData.sx,
+            sy: sunData.sy,
+            opacity: sunData.opacity
+        };
 
         this._dayNightTileShadowSprite.visible = true;
-        this._dayNightTileShadowSprite.opacity = Math.round(tileShadowOpacity * sunData.elevationFactor * 255);
 
+        const w = this._dayNightTileShadowBitmap.width;
+        const h = this._dayNightTileShadowBitmap.height;
         const tileW = $gameMap.tileWidth();
         const tileH = $gameMap.tileHeight();
 
-        const originX = Math.ceil($gameMap.displayX() * tileW);
-        const originY = Math.ceil($gameMap.displayY() * tileH);
+        const startX = Math.floor(displayX) - 3;
+        const endX = startX + Math.ceil(w / tileW) + 6;
+        const startY = Math.floor(displayY) - 4;
+        const endY = startY + Math.ceil(h / tileH) + 8;
 
-        const startX = Math.floor($gameMap.displayX()) - 2;
-        const endX = startX + Math.ceil(w / tileW) + 5;
-        const startY = Math.floor($gameMap.displayY()) - 2;
-        const endY = startY + Math.ceil(h / tileH) + 5;
+        // 1. Coleta todos os tiles emissores de sombra na área visível (+ margem)
+        // Cada item em entries[tx][ty] representa uma peça individual de estrutura para que
+        // pilares sobrepostos na mesma célula (ex: z2 base do pilar N e z3 topo '*' do pilar S)
+        // recebam seu próprio tyBase exato!
+        const grid = {};
+        for (let tx = startX; tx <= endX; tx++) {
+            grid[tx] = {};
+            const wrappedX = $gameMap.roundX(tx);
 
-        const tileset = $gameMap.tileset();
-        const isWorldMap = tileset ? (tileset.mode === 0) : false;
+            for (let ty = startY; ty <= endY; ty++) {
+                const wrappedY = $gameMap.roundY(ty);
+                if (!$gameMap.isValid(wrappedX, wrappedY)) continue;
 
-        // Projeção horizontal pelo sol e componente vertical sutil para manter a sombra ancorada à estrutura
-        const dx = isWorldMap ? Math.round(sunData.skewX * 14) : Math.round(sunData.skewX * 22);
-        const dy = isWorldMap ? Math.round(sunData.scaleY * 6) : Math.round(sunData.scaleY * 14);
+                const regionId = $gameMap.regionId(wrappedX, wrappedY);
+                if (regionId === 251) continue; // Região 251 = Sem sombra
 
-        if (!this._dayNightCastersCanvas || !this._dayNightCanopyCanvas) return;
+                const t0 = $gameMap.tileId(wrappedX, wrappedY, 0);
+                const t1 = $gameMap.tileId(wrappedX, wrappedY, 1);
+                const t2 = $gameMap.tileId(wrappedX, wrappedY, 2);
+                const t3 = $gameMap.tileId(wrappedX, wrappedY, 3);
 
-        if (this._dayNightCastersCanvas.width !== w || this._dayNightCastersCanvas.height !== h) {
-            this._dayNightCastersCanvas.width = w;
-            this._dayNightCastersCanvas.height = h;
-            this._dayNightCanopyCanvas.width = w;
-            this._dayNightCanopyCanvas.height = h;
-            this._dayNightCutoutCanvas.width = w;
-            this._dayNightCutoutCanvas.height = h;
+                const items = [];
+
+                // Camadas 0 e 1 (Fachadas de paredes A3/A4 e Telhados A3)
+                const baseIds = [t0, t1];
+                for (let i = 0; i < 2; i++) {
+                    const tid = baseIds[i];
+                    if (tid <= 0) continue;
+
+                    if (Tilemap.isWallSideTile(tid)) {
+                        items.push({
+                            tx, ty, tid,
+                            kind: 'wallSide',
+                            isUpper: false,
+                            cutout: false, // Autotiles 48x48 opacos não devem recortar sombras de pilares à frente
+                            tyBase: null
+                        });
+                    } else if (Tilemap.isRoofTile(tid)) {
+                        items.push({
+                            tx, ty, tid,
+                            kind: 'roof',
+                            isUpper: false,
+                            cutout: false,
+                            tyBase: null
+                        });
+                    }
+                }
+
+                // Camadas 2 e 3 (Objetos B/C/D/E: árvores, pilares, estátuas, rochas, torres)
+                const objIds = [t2, t3];
+                for (let i = 0; i < 2; i++) {
+                    const tid = objIds[i];
+                    if (tid <= 0) continue;
+
+                    const flag = flags[tid] || 0;
+                    const isUpper = (flag & 0x10) !== 0; // '*' overhead (copa / topo de pilar)
+                    const isSolid = (flag & 0x0f) !== 0; // colisor sólido (tronco / base de pilar)
+                    const forceShadow = (regionId === 250 || ((flag >> 12) === 7));
+
+                    if (isUpper || isSolid || forceShadow) {
+                        items.push({
+                            tx, ty, tid,
+                            kind: isUpper ? 'objUpper' : 'objSolid',
+                            isUpper,
+                            // Apenas objetos sólidos de camada inferior (troncos, bases de pilares, rochas)
+                            // recortam a própria silhueta para não escurecerem a si mesmos
+                            cutout: !isUpper,
+                            tyBase: null
+                        });
+                    } else if (!Tilemap.isAutotile(tid) && ty < endY) {
+                        // Verifica se é o topo passável (flag 0x00) de uma estátua/objeto de 2 tiles cuja base (tid + 8) está em ty + 1
+                        const belowY = $gameMap.roundY(ty + 1);
+                        if ($gameMap.isValid(wrappedX, belowY)) {
+                            const bt2 = $gameMap.tileId(wrappedX, belowY, 2);
+                            const bt3 = $gameMap.tileId(wrappedX, belowY, 3);
+                            const matchBelow = [bt2, bt3].some(bt => bt > 0 && Math.abs((bt - tid) - 8) <= 1 && ((flags[bt] || 0) & 0x1f) !== 0);
+                            if (matchBelow) {
+                                items.push({
+                                    tx, ty, tid,
+                                    kind: 'objUpper',
+                                    isUpper: true,
+                                    cutout: false,
+                                    tyBase: null
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (items.length > 0) {
+                    grid[tx][ty] = items;
+                }
+            }
         }
 
-        const cCtx = this._dayNightCastersCtx;
-        const knCtx = this._dayNightCanopyCtx;
-        const oCtx = this._dayNightCutoutCtx;
-        cCtx.setTransform(1, 0, 0, 1, 0, 0);
-        cCtx.clearRect(0, 0, w, h);
-        knCtx.setTransform(1, 0, 0, 1, 0, 0);
-        knCtx.clearRect(0, 0, w, h);
-        oCtx.setTransform(1, 0, 0, 1, 0, 0);
-        oCtx.clearRect(0, 0, w, h);
+        // 2. Determina a linha de base terrestre (tyBase) de cada peça de baixo para cima
+        for (let tx = startX; tx <= endX; tx++) {
+            const col = grid[tx];
+            for (let ty = endY; ty >= startY; ty--) {
+                const items = col[ty];
+                if (!items) continue;
+                const belowItems = col[ty + 1] || [];
 
-        const flags = $gameMap.tilesetFlags();
-        let casterCount = 0;
-        let canopyCount = 0;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
 
-        for (let y = startY; y < endY; y++) {
-            for (let x = startX; x < endX; x++) {
-                if (!$gameMap.isValid(x, y)) continue;
-
-                const tileL0 = $gameMap.tileId(x, y, 0);
-                const tileL1 = $gameMap.tileId(x, y, 1);
-                const tileL2 = $gameMap.tileId(x, y, 2);
-                const tileL3 = $gameMap.tileId(x, y, 3);
-
-                const screenX = x * tileW - originX;
-                const screenY = y * tileH - originY;
-
-                // Verifica se existe um tile superior (*) em (x, y - 1), indicando que (x, y) é a base de uma estrutura alta (ex: torre/árvore)
-                const isBaseOfVerticalStructure = hasUpperTileAt(x, y - 1, flags);
-
-                if (isWorldMap) {
-                    for (const tid of [tileL0, tileL1]) {
-                        if (tid > 0 && !Tilemap.isTileA1(tid) && flags) {
-                            const f = flags[tid];
-                            if (f !== undefined && (f & 0x0f) === 0x0f) {
-                                this.drawTileToCanvasContext(cCtx, tid, screenX, screenY);
-                                this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                                casterCount++;
-                            }
-                        }
-                    }
-                    for (const tid of [tileL2, tileL3]) {
-                        if (tid > 0 && flags) {
-                            const f = flags[tid];
-                            if (f !== undefined) {
-                                const isUpper = (f & 0x10) !== 0;
-                                const isImpassableOrPartiallyBlocked = (f & 0x0f) !== 0;
-                                if (isUpper || isImpassableOrPartiallyBlocked || isBaseOfVerticalStructure) {
-                                    // No Mapa-Múndi ou estruturas conectadas, mantém topo e base unidos na silhueta contínua
-                                    this.drawTileToCanvasContext(cCtx, tid, screenX, screenY);
-                                    this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                                    casterCount++;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // MAPAS DE ÁREA (Cidades, Vilas, Florestas, Masmorras, Castelos)
-                    const isWall = isWallLocation(x, y);
-                    const isWallEdge = isWallEdgeLocation(x, y);
-
-                    // 1. Paredes e Edifícios (Camadas A3/A4 em L0 e L1):
-                    // Para criar um volume arquitetônico unificado e evitar fatias duplicadas de tijolos,
-                    // a sombra cai na rua apenas a partir da borda/base da parede (isWallEdge) ou beiral de telhado.
-                    for (const tid of [tileL0, tileL1]) {
-                        if (Tilemap.isShadowingTile(tid)) {
-                            if (isWallEdge || Tilemap.isRoofTile(tid)) {
-                                this.drawTileToCanvasContext(cCtx, tid, screenX, screenY);
-                                this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                                casterCount++;
-                            } else {
-                                // Corpo interno da parede: adiciona apenas ao cutout para proteger a fachada
-                                this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                            }
-                        }
-                    }
-
-                    // 2. Objetos e Decorações (Camadas B-E em L2 e L3):
-                    for (const tid of [tileL2, tileL3]) {
-                        if (tid > 0 && flags) {
-                            const f = flags[tid];
-                            if (f !== undefined) {
-                                const isUpper = (f & 0x10) !== 0;
-                                const isBlocked = (f & 0x0f) !== 0;
-
-                                // REGRA VISUAL 2.5D: Se o objeto está pregado numa PAREDE (A3/A4),
-                                // ele é uma "Decoração de Parede" (banners, placa de espada, janelas, tochas).
-                                // Decorações de parede pertencem ao plano vertical e NUNCA devem
-                                // projetar sombras extrudadas sobre a rua/chão!
-                                if (isWall) {
-                                    // Absorvido na parede: apenas protege a arte do objeto no cutout
-                                    this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                                    continue;
-                                }
-
-                                // Se o objeto está no CHÃO (calçada, grama, terra):
-                                if (isUpper) {
-                                    // Copa de árvore elevada ou toldo livre sobre o chão
-                                    if (canopyHeightOffset > 0.01) {
-                                        this.drawTileToCanvasContext(knCtx, tid, screenX, screenY);
-                                        canopyCount++;
-                                    } else {
-                                        this.drawTileToCanvasContext(cCtx, tid, screenX, screenY);
-                                        casterCount++;
-                                    }
-                                } else if (isBlocked || isBaseOfVerticalStructure) {
-                                    // Objeto de solo apoiado no chão (lápides, monumentos, barris, troncos de árvores, postes)
-                                    this.drawTileToCanvasContext(cCtx, tid, screenX, screenY);
-                                    this.drawTileToCanvasContext(oCtx, tid, screenX, screenY);
-                                    casterCount++;
-                                }
-                            }
+                    if (item.kind === 'wallSide') {
+                        const belowWall = belowItems.find(b => b.kind === 'wallSide' && b.tyBase !== null && (b.tyBase - ty) <= 2);
+                        item.tyBase = belowWall ? belowWall.tyBase : ty;
+                    } else if (item.kind === 'roof') {
+                        const belowStruct = belowItems.find(b => (b.kind === 'wallSide' || b.kind === 'roof') && b.tyBase !== null && (b.tyBase - ty) <= 3);
+                        item.tyBase = belowStruct ? belowStruct.tyBase : ty;
+                    } else if (item.kind === 'objSolid') {
+                        // Verifica se faz parte de uma coluna/torre multi-tile contínua na folha de sprites (tid_below - tid === 8)
+                        const belowMatch = belowItems.find(b => b.kind === 'objSolid' && Math.abs((b.tid - item.tid) - 8) <= 1 && b.tyBase !== null && (b.tyBase - ty) <= 3);
+                        item.tyBase = belowMatch ? belowMatch.tyBase : ty;
+                    } else if (item.kind === 'objUpper') {
+                        // Prioridade 1: peça diretamente abaixo na folha de sprites (ex: base de pilar tid+8 em ty+1)
+                        const sheetMatch = belowItems.find(b => !Tilemap.isAutotile(b.tid) && Math.abs((b.tid - item.tid) - 8) <= 1 && b.tyBase !== null);
+                        if (sheetMatch) {
+                            item.tyBase = sheetMatch.tyBase;
+                        } else {
+                            // Prioridade 2: qualquer tronco/objeto na célula abaixo
+                            const anyBelowObj = belowItems.find(b => (b.kind === 'objSolid' || b.kind === 'objUpper') && b.tyBase !== null && (b.tyBase - ty) <= 3);
+                            item.tyBase = anyBelowObj ? anyBelowObj.tyBase : (ty + 1);
                         }
                     }
                 }
             }
         }
 
-        if (casterCount === 0 && canopyCount === 0) {
+        // 2b. Alinha copas laterais ('*') com o tyBase de troncos adjacentes na mesma linha
+        for (let tx = startX; tx <= endX; tx++) {
+            const col = grid[tx];
+            for (let ty = startY; ty <= endY; ty++) {
+                const items = col[ty];
+                if (!items) continue;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.kind !== 'objUpper') continue;
+                    const leftItems = (grid[tx - 1] && grid[tx - 1][ty]) || [];
+                    const rightItems = (grid[tx + 1] && grid[tx + 1][ty]) || [];
+                    const adjSolid = leftItems.find(a => a.kind === 'objSolid' && a.tyBase !== null) ||
+                                     rightItems.find(a => a.kind === 'objSolid' && a.tyBase !== null);
+                    if (adjSolid && Math.abs(adjSolid.tyBase - item.tyBase) <= 1) {
+                        item.tyBase = adjSolid.tyBase;
+                    }
+                }
+            }
+        }
+
+        // 3. Agrupa peças por tyBase para projeção afim contínua
+        const groupsByBase = new Map();
+        const allLowerCutoutItems = [];
+
+        for (let tx = startX; tx <= endX; tx++) {
+            const col = grid[tx];
+            for (let ty = startY; ty <= endY; ty++) {
+                const items = col[ty];
+                if (!items) continue;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.tyBase === null) continue;
+
+                    let list = groupsByBase.get(item.tyBase);
+                    if (!list) {
+                        list = [];
+                        groupsByBase.set(item.tyBase, list);
+                    }
+                    list.push(item);
+
+                    if (item.cutout) {
+                        allLowerCutoutItems.push(item);
+                    }
+                }
+            }
+        }
+
+        const workCtx = this._shadowWorkBitmap.context;
+        const outCtx = this._dayNightTileShadowBitmap.context;
+        workCtx.setTransform(1, 0, 0, 1, 0, 0);
+        workCtx.clearRect(0, 0, w, h);
+        outCtx.setTransform(1, 0, 0, 1, 0, 0);
+        outCtx.clearRect(0, 0, w, h);
+
+        if (groupsByBase.size === 0) {
             this._dayNightTileShadowBitmap._baseTexture.update();
             return;
         }
 
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        const dist = Math.hypot(dx, dy);
+        const sx = sunData.sx;
+        const sy = sunData.sy;
 
-        // PASSE 1A: Extrusão Contínua de Casters com Atenuação pela Distância (Contact Hardening)
-        // Mais densa na base (s = 1) e gradualmente mais suave na ponta (s = steps)
-        if (casterCount > 0) {
-            const steps = Math.max(4, Math.min(10, Math.ceil(dist / 3)));
-            for (let s = 1; s <= steps; s++) {
-                const t = s / steps;
-                const ox = Math.round(dx * t);
-                const oy = Math.round(dy * t);
-                ctx.globalAlpha = Math.max(0.18, Math.pow(1.0 - (t * 0.60), 1.4));
-                ctx.drawImage(this._dayNightCastersCanvas, ox, oy);
+        // 4. Desenha as silhuetas projetadas com penumbra suave em 3 passes (núcleo + 2 bordas difusas)
+        const penumbraPasses = [
+            { dsx: -0.045, dsy: -0.025, alpha: 0.38 },
+            { dsx: +0.045, dsy: +0.025, alpha: 0.38 },
+            { dsx:  0.000, dsy:  0.000, alpha: 1.00 }
+        ];
+
+        workCtx.save();
+        workCtx.globalCompositeOperation = 'source-over';
+
+        for (const [tyBase, items] of groupsByBase.entries()) {
+            const yBase = Math.round((tyBase - displayY + 1) * tileH);
+
+            // Projeção Solar/Lunar Principal:
+            //   x' = x - sx * y + sx * yBase
+            //   y' = sy * y + (1 - sy) * yBase
+            for (let p = 0; p < penumbraPasses.length; p++) {
+                const pass = penumbraPasses[p];
+                const psx = sx + pass.dsx;
+                const psy = Math.max(0.18, sy + pass.dsy);
+
+                workCtx.globalAlpha = pass.alpha;
+                workCtx.setTransform(1, 0, -psx, psy, psx * yBase, (1 - psy) * yBase);
+
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const screenX = Math.round((item.tx - displayX) * tileW);
+                    const screenY = Math.round((item.ty - displayY) * tileH);
+                    const bmp = this.getTilesetBitmapForTile(item.tid);
+                    if (bmp) {
+                        this.drawSingleTileToContext(workCtx, bmp, item.tid, screenX, screenY);
+                    }
+                }
             }
-        }
 
-        // PASSE 1B: Extrusão de Copas Flutuantes (quando CanopyHeightOffset > 0)
-        if (canopyCount > 0) {
-            const offsetDistX = Math.round(dx * canopyHeightOffset);
-            const offsetDistY = Math.round(dy * canopyHeightOffset);
-            const canopySteps = Math.max(3, Math.min(7, Math.ceil(dist / 4)));
-            for (let s = 0; s <= canopySteps; s++) {
-                const t = s / canopySteps;
-                const ox = offsetDistX + Math.round(dx * t * 0.65);
-                const oy = offsetDistY + Math.round(dy * t * 0.65);
-                ctx.globalAlpha = Math.max(0.15, Math.pow(1.0 - (t * 0.65), 1.4));
-                ctx.drawImage(this._dayNightCanopyCanvas, ox, oy);
-            }
-        }
+            // Sombra de Contato Terrestre Sutil (5-6px ao pé de muros/troncos/pilares na linha yBase)
+            const contactSy = -0.14;
+            const contactSx = sx * 0.14;
+            workCtx.globalAlpha = 0.80;
+            workCtx.setTransform(1, 0, -contactSx, contactSy, contactSx * yBase, (1 - contactSy) * yBase);
 
-        // PASSE 2: Tinge os pixels estampados na cor da sombra preservando o gradiente de opacidade (source-atop)
-        ctx.globalAlpha = 1.0;
-        ctx.globalCompositeOperation = 'source-atop';
-        ctx.fillStyle = sunData.shadowRgb || 'rgb(12, 18, 32)';
-        ctx.fillRect(0, 0, w, h);
-
-        // PASSE 3: Recorta a silhueta exata das estruturas originais (destination-out)
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.drawImage(this._dayNightCutoutCanvas, 0, 0);
-
-        // PASSE 4: Dissolução de Sombra Ambiente por Fontes de Luz Locais (Tochas, Fogueiras e Lanterna)
-        const lightInfo = getAmbientLightForTime(totalMinutes);
-        if (playerLanternEnabled && lightInfo.alpha > 0.25) {
-            const flicker = getFlameFlicker(42);
-            const px = $gamePlayer.screenX() + flicker.offsetX;
-            const py = $gamePlayer.screenY() - (tileH / 3) + flicker.offsetY;
-            const pRadius = playerLanternRadius * 0.85 * Math.min(1.0, (lightInfo.alpha - 0.2) / 0.5) * flicker.radiusMult;
-            this.drawSoftLightHole(ctx, px, py, pRadius, 0.85 * flicker.alphaMult);
-        }
-
-        const events = $gameMap.events();
-        for (let i = 0; i < events.length; i++) {
-            const ev = events[i];
-            const lightData = ev.dayNightLightData();
-            if (lightData) {
-                const flicker = getFlameFlicker(ev.eventId() * 17.3);
-                const ex = ev.screenX() + flicker.offsetX;
-                const ey = ev.screenY() - (tileH / 3) + flicker.offsetY;
-                const radius = lightData.radius * 0.85 * flicker.radiusMult;
-                if (ex >= -radius && ex <= w + radius && ey >= -radius && ey <= h + radius) {
-                    this.drawSoftLightHole(ctx, ex, ey, radius, 0.90 * flicker.alphaMult);
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.ty !== tyBase || item.isUpper) continue;
+                const screenX = Math.round((item.tx - displayX) * tileW);
+                const screenY = Math.round((item.ty - displayY) * tileH);
+                const bmp = this.getTilesetBitmapForTile(item.tid);
+                if (bmp) {
+                    this.drawSingleTileToContext(workCtx, bmp, item.tid, screenX, screenY);
                 }
             }
         }
 
-        ctx.restore();
+        // 5. Normaliza toda a máscara de sombra em UMA única operação 'source-in'
+        // Isso elimina 100% das costuras 48x48 e evita escurecimento duplo entre tiles adjacentes!
+        workCtx.setTransform(1, 0, 0, 1, 0, 0);
+        workCtx.globalAlpha = 1.0;
+        workCtx.globalCompositeOperation = 'source-in';
+        workCtx.fillStyle = `rgba(${lightInfo.shadowR}, ${lightInfo.shadowG}, ${lightInfo.shadowB}, ${sunData.opacity.toFixed(3)})`;
+        workCtx.fillRect(0, 0, w, h);
+
+        // 6. Recorta ('destination-out') apenas os objetos B/C/D/E sólidos da camada inferior (_lowerLayer z=0)
+        // para que troncos, bases de pilares e rochas não escureçam a si mesmos
+        workCtx.globalCompositeOperation = 'destination-out';
+        for (let i = 0; i < allLowerCutoutItems.length; i++) {
+            const item = allLowerCutoutItems[i];
+            const screenX = Math.round((item.tx - displayX) * tileW);
+            const screenY = Math.round((item.ty - displayY) * tileH);
+            const bmp = this.getTilesetBitmapForTile(item.tid);
+            if (bmp) {
+                this.drawSingleTileToContext(workCtx, bmp, item.tid, screenX, screenY);
+            }
+        }
+
+        workCtx.restore();
+
+        // 7. Transfere para o bitmap final do Tilemap
+        outCtx.drawImage(this._shadowWorkBitmap.canvas, 0, 0);
         this._dayNightTileShadowBitmap._baseTexture.update();
     };
 
+    // -------------------------------------------------------------------------
+    // 5.3 Coleta de Fontes de Luz Ativas no Mapa (para Iluminação e Sombras)
+    // -------------------------------------------------------------------------
+
+    Spriteset_Map.prototype.collectActiveLightSources = function() {
+        const sources = [];
+        if (!$gameMap) return sources;
+
+        const timeTick = Graphics.frameCount * 0.08;
+
+        // 1. Luz da Lanterna do Jogador
+        const playerHasLight = (playerLightSwitchId > 0)
+            ? ($gameSwitches && $gameSwitches.value(playerLightSwitchId))
+            : ($gameSystem && $gameSystem.isNight());
+
+        if (playerHasLight && $gamePlayer) {
+            const pulse = Math.sin(timeTick * 0.7) * 3;
+            sources.push({
+                x: $gamePlayer.screenX(),
+                y: $gamePlayer.screenY() - 20,
+                worldX: $gamePlayer._realX !== undefined ? $gamePlayer._realX : $gamePlayer.x,
+                worldY: $gamePlayer._realY !== undefined ? $gamePlayer._realY : $gamePlayer.y,
+                radius: playerLightRadius + pulse,
+                color: playerLightColor,
+                intensity: 0.95,
+                isPlayer: true
+            });
+        }
+
+        // 2. Luzes de Eventos no Mapa
+        const events = $gameMap.events();
+        for (let i = 0; i < events.length; i++) {
+            const ev = events[i];
+            if (!ev || ev._erased) continue;
+            const light = ev.getDayNightLightData();
+            if (!light) continue;
+
+            const sx = ev.screenX();
+            const sy = ev.screenY() - 20;
+            if (sx < -light.radius - 64 || sx > Graphics.width + light.radius + 64 ||
+                sy < -light.radius - 64 || sy > Graphics.height + light.radius + 64) {
+                continue;
+            }
+
+            let radius = light.radius;
+            let intensity = light.intensity || 1.0;
+            if (light.flicker) {
+                const seed = ev._dayNightLightSeed || 0;
+                const wave = Math.sin(timeTick * 2.1 + seed) * 0.5 + Math.cos(timeTick * 3.4 + seed) * 0.5;
+                radius += wave * (light.radius * 0.055);
+                intensity += wave * 0.06;
+            }
+
+            sources.push({
+                x: sx,
+                y: sy,
+                worldX: ev._realX !== undefined ? ev._realX : ev.x,
+                worldY: ev._realY !== undefined ? ev._realY : ev.y,
+                radius: Math.max(24, radius),
+                color: light.color,
+                intensity: Math.max(0.4, Math.min(1.35, intensity)),
+                isPlayer: false,
+                eventId: ev.eventId()
+            });
+        }
+
+        this._activeLightSources = sources;
+        return sources;
+    };
+
+    // -------------------------------------------------------------------------
+    // 5.4 Renderização Atmosférica + Bloom Aditivo (PIXI.BLEND_MODES.ADD)
+    // -------------------------------------------------------------------------
+
     Spriteset_Map.prototype.updateDayNightLighting = function() {
-        if (!this._dayNightOverlayBitmap) return;
-
-        const ctx = this._dayNightOverlayBitmap.context;
-        const w = Graphics.width;
-        const h = Graphics.height;
-
-        ctx.clearRect(0, 0, w, h);
+        if (!this._dayNightOverlayBitmap || !this._dayNightBloomBitmap || !$gameSystem) return;
 
         if ($gameSystem.isDayNightIndoor()) {
-            this._dayNightOverlayBitmap._baseTexture.update();
+            this._dayNightOverlaySprite.visible = false;
+            this._dayNightBloomSprite.visible = false;
             return;
         }
 
         const totalMinutes = $gameSystem.dayNightTotalMinutes();
         const light = getAmbientLightForTime(totalMinutes);
+        const fixedDarkness = $gameSystem.getMapAmbientDarkness();
 
-        if (light.alpha <= 0.005) {
+        let r = light.r;
+        let g = light.g;
+        let b = light.b;
+        let alpha = light.alpha;
+        let vignette = light.vignette;
+
+        if (fixedDarkness !== null) {
+            r = 8;
+            g = 10;
+            b = 18;
+            alpha = fixedDarkness;
+            vignette = Math.min(0.30, fixedDarkness * 0.35);
+        }
+
+        const sources = this.collectActiveLightSources();
+        const w = this._dayNightOverlayBitmap.width;
+        const h = this._dayNightOverlayBitmap.height;
+
+        // --- Camada 1: Ambiência, Vinheta e Recortes Suaves de Luz ---
+        const ctx = this._dayNightOverlayBitmap.context;
+        ctx.clearRect(0, 0, w, h);
+
+        if (alpha <= 0.005 && vignette <= 0.005) {
+            this._dayNightOverlaySprite.visible = false;
+        } else {
+            this._dayNightOverlaySprite.visible = true;
+            ctx.save();
+
+            // Preenche a cor atmosférica do horário
+            if (alpha > 0.005) {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Vinheta cinematográfica suave nas bordas da tela
+            if (vignette > 0.01) {
+                const cx = w * 0.5;
+                const cy = h * 0.5;
+                const outerR = Math.hypot(cx, cy);
+                const vigGrad = ctx.createRadialGradient(cx, cy, outerR * 0.48, cx, cy, outerR);
+                vigGrad.addColorStop(0.0, 'rgba(4, 6, 14, 0.0)');
+                vigGrad.addColorStop(0.65, `rgba(4, 6, 14, ${(vignette * 0.45).toFixed(3)})`);
+                vigGrad.addColorStop(1.0, `rgba(4, 6, 14, ${vignette.toFixed(3)})`);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = vigGrad;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Esculpe recortes suaves ('destination-out') onde há fontes de luz
+            if (alpha > 0.02 && sources.length > 0) {
+                ctx.globalCompositeOperation = 'destination-out';
+                for (let i = 0; i < sources.length; i++) {
+                    const src = sources[i];
+                    const grad = ctx.createRadialGradient(src.x, src.y, 0, src.x, src.y, src.radius);
+                    const coreCut = Math.min(0.96, 0.88 * src.intensity);
+                    grad.addColorStop(0.00, `rgba(0, 0, 0, ${coreCut.toFixed(3)})`);
+                    grad.addColorStop(0.30, `rgba(0, 0, 0, ${(coreCut * 0.78).toFixed(3)})`);
+                    grad.addColorStop(0.62, `rgba(0, 0, 0, ${(coreCut * 0.36).toFixed(3)})`);
+                    grad.addColorStop(0.85, `rgba(0, 0, 0, ${(coreCut * 0.10).toFixed(3)})`);
+                    grad.addColorStop(1.00, 'rgba(0, 0, 0, 0.0)');
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(src.x, src.y, src.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
             this._dayNightOverlayBitmap._baseTexture.update();
-            return;
         }
 
-        ctx.save();
-        ctx.fillStyle = `rgba(${light.r}, ${light.g}, ${light.b}, ${light.alpha})`;
-        ctx.fillRect(0, 0, w, h);
+        // --- Camada 2: Bloom Aditivo Real (PIXI.BLEND_MODES.ADD) ---
+        const bCtx = this._dayNightBloomBitmap.context;
+        bCtx.clearRect(0, 0, w, h);
 
-        ctx.globalCompositeOperation = 'destination-out';
+        // O bloom é mais intenso à noite/crepúsculo e sutil durante o dia
+        const bloomVisibility = Math.max(0.22, Math.min(1.0, alpha * 1.25 + 0.18));
+        if (sources.length === 0 || bloomVisibility <= 0.02) {
+            this._dayNightBloomSprite.visible = false;
+        } else {
+            this._dayNightBloomSprite.visible = true;
+            bCtx.save();
+            bCtx.globalCompositeOperation = 'lighter';
 
-        if (playerLanternEnabled && light.alpha > 0.25) {
-            const flicker = getFlameFlicker(42);
-            const px = $gamePlayer.screenX() + flicker.offsetX;
-            const py = $gamePlayer.screenY() - ($gameMap.tileHeight() / 3) + flicker.offsetY;
-            const pRadius = playerLanternRadius * Math.min(1.0, (light.alpha - 0.2) / 0.5) * flicker.radiusMult;
+            for (let i = 0; i < sources.length; i++) {
+                const src = sources[i];
+                const rgb = hexToRgb(src.color);
+                const strength = bloomVisibility * src.intensity;
 
-            this.drawSoftLightHole(ctx, px, py, pRadius, 0.95 * flicker.alphaMult);
-        }
+                // Halo amplo atmosférico
+                const outerGrad = bCtx.createRadialGradient(src.x, src.y, 0, src.x, src.y, src.radius * 1.05);
+                outerGrad.addColorStop(0.00, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(0.34 * strength).toFixed(3)})`);
+                outerGrad.addColorStop(0.32, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(0.18 * strength).toFixed(3)})`);
+                outerGrad.addColorStop(0.68, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(0.06 * strength).toFixed(3)})`);
+                outerGrad.addColorStop(1.00, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
 
-        const events = $gameMap.events();
-        for (let i = 0; i < events.length; i++) {
-            const ev = events[i];
-            const lightData = ev.dayNightLightData();
-            if (lightData) {
-                const flicker = getFlameFlicker(ev.eventId() * 17.3);
-                const ex = ev.screenX() + flicker.offsetX;
-                const ey = ev.screenY() - ($gameMap.tileHeight() / 3) + flicker.offsetY;
-                const radius = lightData.radius * flicker.radiusMult;
+                bCtx.fillStyle = outerGrad;
+                bCtx.beginPath();
+                bCtx.arc(src.x, src.y, src.radius * 1.05, 0, Math.PI * 2);
+                bCtx.fill();
 
-                if (ex >= -radius && ex <= w + radius && ey >= -radius && ey <= h + radius) {
-                    this.drawSoftLightHole(ctx, ex, ey, radius, 1.0 * flicker.alphaMult);
-                }
+                // Núcleo quente brilhante
+                const coreRadius = src.radius * 0.28;
+                const coreGrad = bCtx.createRadialGradient(src.x, src.y, 0, src.x, src.y, coreRadius);
+                coreGrad.addColorStop(0.00, `rgba(255, 248, 230, ${(0.26 * strength).toFixed(3)})`);
+                coreGrad.addColorStop(0.55, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(0.12 * strength).toFixed(3)})`);
+                coreGrad.addColorStop(1.00, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.0)`);
+
+                bCtx.fillStyle = coreGrad;
+                bCtx.beginPath();
+                bCtx.arc(src.x, src.y, coreRadius, 0, Math.PI * 2);
+                bCtx.fill();
             }
+
+            bCtx.restore();
+            this._dayNightBloomBitmap._baseTexture.update();
         }
-
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-
-        if (playerLanternEnabled && light.alpha > 0.25) {
-            const flicker = getFlameFlicker(42);
-            const px = $gamePlayer.screenX() + flicker.offsetX;
-            const py = $gamePlayer.screenY() - ($gameMap.tileHeight() / 3) + flicker.offsetY;
-            const pRadius = playerLanternRadius * Math.min(1.0, (light.alpha - 0.2) / 0.5) * flicker.radiusMult;
-            this.drawColorLightAura(ctx, px, py, pRadius, 'rgba(255, 230, 160, 0.25)', flicker.alphaMult);
-        }
-
-        for (let i = 0; i < events.length; i++) {
-            const ev = events[i];
-            const lightData = ev.dayNightLightData();
-            if (lightData) {
-                const flicker = getFlameFlicker(ev.eventId() * 17.3);
-                const ex = ev.screenX() + flicker.offsetX;
-                const ey = ev.screenY() - ($gameMap.tileHeight() / 3) + flicker.offsetY;
-                const radius = lightData.radius * flicker.radiusMult;
-
-                if (ex >= -radius && ex <= w + radius && ey >= -radius && ey <= h + radius) {
-                    this.drawColorLightAura(ctx, ex, ey, radius, lightData.color || '#ffaa44', flicker.alphaMult);
-                }
-            }
-        }
-
-        ctx.restore();
-        this._dayNightOverlayBitmap._baseTexture.update();
-    };
-
-    Spriteset_Map.prototype.drawSoftLightHole = function(ctx, x, y, radius, intensity) {
-        if (radius <= 0) return;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        grad.addColorStop(0.00, `rgba(0, 0, 0, ${intensity})`);
-        grad.addColorStop(0.20, `rgba(0, 0, 0, ${(intensity * 0.95).toFixed(3)})`);
-        grad.addColorStop(0.45, `rgba(0, 0, 0, ${(intensity * 0.70).toFixed(3)})`);
-        grad.addColorStop(0.75, `rgba(0, 0, 0, ${(intensity * 0.30).toFixed(3)})`);
-        grad.addColorStop(1.00, 'rgba(0, 0, 0, 0)');
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-    };
-
-    Spriteset_Map.prototype.drawColorLightAura = function(ctx, x, y, radius, colorHexOrRgba, intensityMultiplier = 1.0) {
-        if (radius <= 0) return;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-
-        let rgb = '255, 180, 80';
-        if (colorHexOrRgba.startsWith('#')) {
-            const hex = colorHexOrRgba.replace('#', '');
-            const bigint = parseInt(hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex, 16);
-            const r = (bigint >> 16) & 255;
-            const g = (bigint >> 8) & 255;
-            const b = bigint & 255;
-            rgb = `${r}, ${g}, ${b}`;
-        }
-
-        const a1 = (0.42 * intensityMultiplier).toFixed(3);
-        const a2 = (0.22 * intensityMultiplier).toFixed(3);
-        const a3 = (0.07 * intensityMultiplier).toFixed(3);
-
-        grad.addColorStop(0.00, `rgba(${rgb}, ${a1})`);
-        grad.addColorStop(0.35, `rgba(${rgb}, ${a2})`);
-        grad.addColorStop(0.70, `rgba(${rgb}, ${a3})`);
-        grad.addColorStop(1.00, `rgba(${rgb}, 0.0)`);
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
     };
 
     // =========================================================================
-    // 6. Sprite_Character - Projeção de Sombras Dinâmicas e Oclusão de Contato
+    // 6. Sombras Projetadas Coerentes para Personagens & Eventos (Sprite_Character)
     // =========================================================================
+
+    // Bitmap estático compartilhado para a sombra de contato oval sob os pés (nunca destruído por sprites individuais)
+    let _sharedContactOvalBitmap = null;
+    function getSharedContactOvalBitmap() {
+        if (!_sharedContactOvalBitmap) {
+            const bw = 48;
+            const bh = 24;
+            _sharedContactOvalBitmap = new Bitmap(bw, bh);
+            const ctx = _sharedContactOvalBitmap.context;
+            ctx.save();
+            ctx.translate(bw / 2, bh / 2);
+            ctx.scale(1.0, bh / bw);
+            const grad = ctx.createRadialGradient(0, 0, 1, 0, 0, bw * 0.46);
+            grad.addColorStop(0.00, 'rgba(8, 12, 24, 0.72)');
+            grad.addColorStop(0.55, 'rgba(8, 12, 24, 0.38)');
+            grad.addColorStop(1.00, 'rgba(8, 12, 24, 0.00)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, bw * 0.46, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            _sharedContactOvalBitmap._baseTexture.update();
+        }
+        return _sharedContactOvalBitmap;
+    }
 
     const _Sprite_Character_initMembers = Sprite_Character.prototype.initMembers;
     Sprite_Character.prototype.initMembers = function() {
         _Sprite_Character_initMembers.call(this);
-        this._dynamicSunShadowSprite = null;
+        this._sunShadowSprite = null;
         this._contactShadowSprite = null;
-    };
-
-    Sprite_Character.prototype.getCharacterShadowContainer = function() {
-        if (this.parent && this.parent._characterShadowContainer) {
-            return this.parent._characterShadowContainer;
-        }
-        if (typeof SceneManager !== 'undefined' && SceneManager._scene && SceneManager._scene._spriteset && SceneManager._scene._spriteset._characterShadowContainer) {
-            return SceneManager._scene._spriteset._characterShadowContainer;
-        }
-        return null;
-    };
-
-    Sprite_Character.prototype.createDynamicSunShadow = function() {
-        if (!this._dynamicSunShadowSprite) {
-            this._dynamicSunShadowSprite = new Sprite();
-            this._dynamicSunShadowSprite.anchor.x = 0.5;
-            this._dynamicSunShadowSprite.anchor.y = 1.0;
-            this._dynamicSunShadowSprite.setColorTone([-255, -255, -255, 0]);
-            this._dynamicSunShadowSprite.setBlendColor([0, 0, 0, 255]);
-
-            if (enableSoftShadows && typeof PIXI !== 'undefined' && PIXI.filters && PIXI.filters.BlurFilter) {
-                const blur = new PIXI.filters.BlurFilter();
-                blur.blur = shadowBlur;
-                this._dynamicSunShadowSprite.filters = [blur];
-            }
-            if (typeof PIXI !== 'undefined' && PIXI.BLEND_MODES) {
-                this._dynamicSunShadowSprite.blendMode = shadowBlendMode;
-            }
-        }
-
-        if (!this._contactShadowSprite && enableContactShadow) {
-            this._contactShadowSprite = new Sprite(getSharedContactShadowBitmap());
-            this._contactShadowSprite.anchor.x = 0.5;
-            this._contactShadowSprite.anchor.y = 0.5;
-            if (typeof PIXI !== 'undefined' && PIXI.BLEND_MODES) {
-                this._contactShadowSprite.blendMode = shadowBlendMode;
-            }
-        }
-
-        const container = this.getCharacterShadowContainer();
-        if (container) {
-            if (this._dynamicSunShadowSprite && this._dynamicSunShadowSprite.parent !== container) {
-                container.addChild(this._dynamicSunShadowSprite);
-            }
-            if (this._contactShadowSprite && this._contactShadowSprite.parent !== container) {
-                container.addChild(this._contactShadowSprite);
-            }
-        }
     };
 
     const _Sprite_Character_update = Sprite_Character.prototype.update;
@@ -1536,167 +1542,224 @@
         this.updateDynamicSunShadow();
     };
 
+    Sprite_Character.prototype.createDynamicSunShadow = function() {
+        if (this._sunShadowSprite || !this.parent) return;
+
+        // 1. Sombra de Contato Oval Suave (Oclusão de Ambiente nos pés)
+        this._contactShadowSprite = new Sprite(getSharedContactOvalBitmap());
+        this._contactShadowSprite.anchor.x = 0.5;
+        this._contactShadowSprite.anchor.y = 0.55;
+        this._contactShadowSprite.z = 1.9;
+        this.parent.addChild(this._contactShadowSprite);
+
+        // 2. Sombra Projetada Dinâmica (Silhueta animada do próprio personagem)
+        this._sunShadowSprite = new Sprite();
+        this._sunShadowSprite.anchor.x = 0.5;
+        this._sunShadowSprite.anchor.y = 1.0;
+        this._sunShadowSprite.setColorTone([-255, -255, -255, 255]);
+        this._sunShadowSprite.setBlendColor([14, 20, 38, 255]);
+        this._sunShadowSprite.z = 2;
+        this.parent.addChild(this._sunShadowSprite);
+    };
+
+    Sprite_Character.prototype.shouldCastSunShadow = function() {
+        if (!enableDynamicShadows || !$gameSystem) return false;
+        const c = this._character;
+        if (!c) return false;
+
+        if (!c.characterName() || c.isTransparent() || c.opacity() === 0) return false;
+        if (c instanceof Game_Vehicle && !c._driving) return false;
+        if (c instanceof Game_Follower && !c.isVisible()) return false;
+        if (c instanceof Game_Event) {
+            if (c._erased || c.hasNoSunShadow()) return false;
+            // Eventos que são tochas/fogueiras puras não projetam sombra escura sobre o próprio fogo
+            const light = c.getDayNightLightData();
+            if (light && light.flicker) return false;
+        }
+        return true;
+    };
+
     Sprite_Character.prototype.updateDynamicSunShadow = function() {
-        if (!this._character || this.isEmptyCharacter() || !this.visible || this._character.isTransparent()) {
-            if (this._dynamicSunShadowSprite) this._dynamicSunShadowSprite.visible = false;
+        if (!this.shouldCastSunShadow()) {
+            if (this._sunShadowSprite) this._sunShadowSprite.visible = false;
             if (this._contactShadowSprite) this._contactShadowSprite.visible = false;
             return;
         }
 
-        if (this._tileId > 0 || this._character instanceof Game_Vehicle) {
-            if (this._dynamicSunShadowSprite) this._dynamicSunShadowSprite.visible = false;
-            if (this._contactShadowSprite) this._contactShadowSprite.visible = false;
-            return;
-        }
-
-        if (this._character instanceof Game_Event) {
-            const ev = this._character.event();
-            if (ev && ev.meta && ev.meta.no_shadow) {
-                if (this._dynamicSunShadowSprite) this._dynamicSunShadowSprite.visible = false;
-                if (this._contactShadowSprite) this._contactShadowSprite.visible = false;
-                return;
-            }
-        }
-
-        if (!this._dynamicSunShadowSprite || (enableContactShadow && !this._contactShadowSprite)) {
+        if (!this._sunShadowSprite && this.parent) {
             this.createDynamicSunShadow();
         }
+        if (!this._sunShadowSprite || !this._contactShadowSprite) return;
 
-        const container = this.getCharacterShadowContainer();
-        if (container) {
-            if (this._dynamicSunShadowSprite && this._dynamicSunShadowSprite.parent !== container) {
-                container.addChild(this._dynamicSunShadowSprite);
-            }
-            if (this._contactShadowSprite && this._contactShadowSprite.parent !== container) {
-                container.addChild(this._contactShadowSprite);
-            }
+        if (this._sunShadowSprite.parent !== this.parent && this.parent) {
+            this.parent.addChild(this._contactShadowSprite);
+            this.parent.addChild(this._sunShadowSprite);
         }
 
-        const jumpHeight = (this._character && typeof this._character.jumpHeight === 'function') ? this._character.jumpHeight() : 0;
-        const groundX = this.x;
-        const groundY = this.y + jumpHeight;
+        const totalMinutes = $gameSystem.dayNightTotalMinutes();
+        const sunData = getSolarShadowTransform(totalMinutes);
+        const lightInfo = getAmbientLightForTime(totalMinutes);
+        const c = this._character;
 
-        if (enableContactShadow && this._contactShadowSprite) {
-            this._contactShadowSprite.x = groundX;
-            this._contactShadowSprite.y = groundY - 2;
-            const jumpScale = Math.max(0.35, 1.0 - jumpHeight / 90);
-            this._contactShadowSprite.scale.x = jumpScale;
-            this._contactShadowSprite.scale.y = jumpScale * 0.9;
-            const jumpAlpha = Math.max(0.20, 1.0 - jumpHeight / 70);
-            this._contactShadowSprite.opacity = Math.round(contactShadowOpacity * 255 * (this.opacity / 255) * jumpAlpha);
-            this._contactShadowSprite.visible = true;
-        } else if (this._contactShadowSprite) {
-            this._contactShadowSprite.visible = false;
+        // Sincroniza frame da silhueta com o sprite do personagem
+        const shadow = this._sunShadowSprite;
+        const contact = this._contactShadowSprite;
+        if (shadow.bitmap !== this.bitmap) {
+            shadow.bitmap = this.bitmap;
         }
-
-        const isIndoor = typeof $gameSystem !== 'undefined' && $gameSystem && $gameSystem.isDayNightIndoor();
-        if (!enableDynamicShadows || isIndoor) {
-            if (this._dynamicSunShadowSprite) this._dynamicSunShadowSprite.visible = false;
-            return;
-        }
-
-        const totalMinutes = (typeof $gameSystem !== 'undefined' && $gameSystem) ? $gameSystem.dayNightTotalMinutes() : 720;
-        const sunData = getSunShadowVectorForTime(totalMinutes);
-
-        // Verifica se há uma fonte de luz local próxima para modular/projetar a sombra do personagem
-        let localLightSkewX = 0;
-        let localLightScaleY = 0;
-        let localLightInfluence = 0;
-
-        if ($gameMap) {
-            const charScreenX = this._character.screenX();
-            const charScreenY = this._character.screenY();
-            const events = $gameMap.events();
-            let closestDist = Infinity;
-
-            for (let i = 0; i < events.length; i++) {
-                const ev = events[i];
-                if (ev === this._character) continue;
-                const lData = ev.dayNightLightData();
-                if (lData && lData.radius > 0) {
-                    const lx = ev.screenX();
-                    const ly = ev.screenY();
-                    const dist = Math.hypot(charScreenX - lx, charScreenY - ly);
-                    if (dist < lData.radius && dist < closestDist && dist > 4) {
-                        closestDist = dist;
-                        const strength = 1.0 - (dist / lData.radius);
-                        localLightInfluence = strength * 0.75;
-                        localLightSkewX = ((charScreenX - lx) / lData.radius) * 1.15;
-                        localLightScaleY = 0.25 + (dist / lData.radius) * 0.35;
-                    }
-                }
-            }
-        }
-
-        if (!sunData.visible && localLightInfluence <= 0.05) {
-            if (this._dynamicSunShadowSprite) this._dynamicSunShadowSprite.visible = false;
-            return;
-        }
-
-        const shadow = this._dynamicSunShadowSprite;
-        shadow.bitmap = this.bitmap;
         shadow.setFrame(this._frame.x, this._frame.y, this._frame.width, this._frame.height);
 
-        const finalSkewX = sunData.visible
-            ? sunData.skewX * (1.0 - localLightInfluence) + localLightSkewX * localLightInfluence
-            : localLightSkewX;
-        const finalScaleY = sunData.visible
-            ? sunData.scaleY * (1.0 - localLightInfluence) + localLightScaleY * localLightInfluence
-            : localLightScaleY;
-        const finalAlpha = sunData.visible
-            ? Math.max(sunData.alpha * (1.0 - localLightInfluence * 0.4), localLightInfluence * shadowOpacity)
-            : localLightInfluence * shadowOpacity;
+        const groundY = c.screenY();
+        const jumpHeight = c.jumpHeight ? c.jumpHeight() : 0;
+        const jumpFactor = Math.max(0.35, 1.0 - jumpHeight / 100);
 
-        shadow.x = groundX;
-        shadow.y = groundY;
-        shadow.anchor.x = 0.5;
-        shadow.anchor.y = 1.0;
-        shadow.skew.x = finalSkewX;
-        shadow.scale.y = -finalScaleY;
-        shadow.scale.x = 1.0;
-        shadow.opacity = Math.round(finalAlpha * 255 * (this.opacity / 255));
+        // --- Vetor de Sombra Combinado: Sol/Lua + Luzes Pontuais Próximas ---
+        let sx = sunData.sx;
+        let sy = sunData.sy;
+        let shadowOpacity = sunData.opacity;
+
+        const spriteset = SceneManager._scene && SceneManager._scene._spriteset;
+        const lightSources = (spriteset && spriteset._activeLightSources) ? spriteset._activeLightSources : [];
+
+        if (lightSources.length > 0) {
+            const charScreenX = this.x;
+            const charScreenY = groundY;
+            let localWeightSum = 0;
+            let localSxSum = 0;
+            let localSySum = 0;
+            let maxLocalBoost = 0;
+
+            for (let i = 0; i < lightSources.length; i++) {
+                const src = lightSources[i];
+                // Lanterna na mão do próprio jogador suaviza a sombra solar sem girar loucamente
+                if (src.isPlayer && c === $gamePlayer) {
+                    shadowOpacity *= 0.72;
+                    continue;
+                }
+
+                const dx = charScreenX - src.x;
+                const dy = charScreenY - (src.y + 16);
+                const dist = Math.hypot(dx, dy);
+                if (dist >= src.radius || dist < 4) continue;
+
+                const falloff = Math.pow(1.0 - dist / src.radius, 1.6) * src.intensity;
+                const len = (0.35 + 0.50 * (dist / src.radius)) * shadowLengthMultiplier;
+
+                // Sombra aponta na direção OPOSTA à fonte de luz:
+                //   dx > 0 (personagem à direita da luz) -> sombra p/ direita (sx > 0)
+                //   dy < 0 (personagem ao norte da luz) -> sombra mais longa p/ norte (sy maior)
+                const lSx = (dx / dist) * len;
+                const lSy = Math.max(0.26, Math.min(0.82, (0.44 - (dy / dist) * 0.24) * shadowLengthMultiplier));
+
+                localSxSum += lSx * falloff;
+                localSySum += lSy * falloff;
+                localWeightSum += falloff;
+                if (falloff > maxLocalBoost) maxLocalBoost = falloff;
+            }
+
+            if (localWeightSum > 0.01) {
+                const avgLocalSx = localSxSum / localWeightSum;
+                const avgLocalSy = localSySum / localWeightSum;
+                // À noite, a luz local domina a direção da sombra; de dia, o Sol domina
+                const solarDominance = sunData.isDaylight ? 0.75 : 0.20;
+                const blend = Math.min(0.88, maxLocalBoost * (1.0 - solarDominance * 0.65));
+
+                sx = sx * (1.0 - blend) + avgLocalSx * blend;
+                sy = sy * (1.0 - blend) + avgLocalSy * blend;
+                shadowOpacity = Math.max(shadowOpacity, Math.min(0.58, maxLocalBoost * 0.52 * shadowIntensity));
+            }
+        }
+
+        // Posiciona e escala a Sombra de Contato Oval sob os pés
+        contact.x = this.x;
+        contact.y = groundY - 1;
+        const charW = Math.max(24, this._frame.width || 48);
+        contact.scale.x = (charW / 48) * 0.78 * jumpFactor * shadowWidthMultiplier;
+        contact.scale.y = (charW / 48) * 0.65 * jumpFactor * shadowWidthMultiplier;
+        const baseContactAlpha = $gameSystem.isDayNightIndoor() ? 0.26 : Math.max(0.22, shadowOpacity * 0.85);
+        contact.opacity = Math.round(Math.min(0.62, baseContactAlpha) * (c.opacity() / 255) * 255);
+        contact.visible = contact.opacity > 4;
+
+        if (shadowOpacity <= 0.01) {
+            shadow.visible = false;
+            return;
+        }
+
+        // Posiciona a Sombra Projetada exatamente nos pés no chão
         shadow.visible = true;
+        shadow.x = this.x;
+        shadow.y = groundY;
+
+        // Conversão exata da matriz [ 1  -sx ; 0  sy ] para PIXI.Sprite (anchor.y = 1.0):
+        //   lt.c = sin(skew.x) * scale.y = -sx
+        //   lt.d = cos(skew.x) * scale.y = +sy
+        // IMPORTANTE: scale.y POSITIVO projeta a sombra para o fundo/chão (Norte) e mantém o sinal correto de skew.x!
+        shadow.scale.x = this.scale.x * jumpFactor * shadowWidthMultiplier;
+        shadow.scale.y = Math.hypot(sx, sy) * jumpFactor;
+        shadow.skew.x = Math.atan2(-sx, sy);
+
+        shadow.setBlendColor([lightInfo.shadowR, lightInfo.shadowG, lightInfo.shadowB, 255]);
+        shadow.opacity = Math.round(shadowOpacity * jumpFactor * (c.opacity() / 255) * 255);
+    };
+
+    // Guard seguro contra falha de textura nula no PIXI durante destruição de cena
+    const _Sprite_destroy = Sprite.prototype.destroy;
+    Sprite.prototype.destroy = function(options) {
+        if (!this._texture) {
+            if (this.children && this.children.length > 0) {
+                const children = this.children.slice();
+                for (const child of children) {
+                    if (child && child.destroy) child.destroy(options);
+                }
+            }
+            return;
+        }
+        _Sprite_destroy.call(this, options);
     };
 
     const _Sprite_Character_destroy = Sprite_Character.prototype.destroy;
     Sprite_Character.prototype.destroy = function(options) {
-        if (this._dynamicSunShadowSprite) {
-            if (this._dynamicSunShadowSprite.parent && typeof this._dynamicSunShadowSprite.parent.removeChild === 'function') {
-                this._dynamicSunShadowSprite.parent.removeChild(this._dynamicSunShadowSprite);
+        if (this._sunShadowSprite) {
+            if (this._sunShadowSprite.parent) {
+                this._sunShadowSprite.parent.removeChild(this._sunShadowSprite);
             }
-            if (typeof this._dynamicSunShadowSprite.destroy === 'function') {
-                this._dynamicSunShadowSprite.destroy();
-            }
-            this._dynamicSunShadowSprite = null;
+            this._sunShadowSprite.bitmap = null;
+            this._sunShadowSprite.destroy();
+            this._sunShadowSprite = null;
         }
         if (this._contactShadowSprite) {
-            if (this._contactShadowSprite.parent && typeof this._contactShadowSprite.parent.removeChild === 'function') {
+            if (this._contactShadowSprite.parent) {
                 this._contactShadowSprite.parent.removeChild(this._contactShadowSprite);
             }
-            if (typeof this._contactShadowSprite.destroy === 'function') {
-                this._contactShadowSprite.destroy();
-            }
+            // Não destrói o bitmap compartilhado _sharedContactOvalBitmap
+            this._contactShadowSprite.bitmap = null;
+            this._contactShadowSprite.destroy();
             this._contactShadowSprite = null;
         }
-        if (_Sprite_Character_destroy) {
-            _Sprite_Character_destroy.call(this, options);
-        }
+        _Sprite_Character_destroy.call(this, options);
     };
 
     // =========================================================================
-    // 7. HUD do Relógio de Dia, Noite e Fases da Lua
+    // 7. Atualização na Scene_Map e HUD Celestial do Relógio
     // =========================================================================
+
+    const _Scene_Map_update = Scene_Map.prototype.update;
+    Scene_Map.prototype.update = function() {
+        _Scene_Map_update.call(this);
+        if ($gameSystem) {
+            $gameSystem.updateDayNight();
+        }
+    };
 
     class Sprite_DayNightClock extends Sprite {
         constructor() {
-            super();
-            this.bitmap = new Bitmap(200, 50);
+            super(new Bitmap(184, 54));
             this.x = clockX;
             this.y = clockY;
-            this.z = 20;
             this._lastMinute = -1;
             this._lastHour = -1;
             this._lastMoonPhase = -1;
+            this.update();
         }
 
         update() {
@@ -1721,8 +1784,8 @@
         drawMoonPhaseIcon(ctx, cx, cy, radius, phaseIndex) {
             ctx.save();
 
-            ctx.fillStyle = '#182232';
-            ctx.strokeStyle = '#4a607a';
+            ctx.fillStyle = '#141d2e';
+            ctx.strokeStyle = '#567296';
             ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -1735,12 +1798,12 @@
             }
 
             if (phaseIndex === 4) {
-                const glow = ctx.createRadialGradient(cx, cy, radius * 0.5, cx, cy, radius * 1.45);
-                glow.addColorStop(0, 'rgba(210, 235, 255, 0.45)');
-                glow.addColorStop(1, 'rgba(210, 235, 255, 0.0)');
+                const glow = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius * 1.55);
+                glow.addColorStop(0, 'rgba(215, 238, 255, 0.50)');
+                glow.addColorStop(1, 'rgba(215, 238, 255, 0.0)');
                 ctx.fillStyle = glow;
                 ctx.beginPath();
-                ctx.arc(cx, cy, radius * 1.45, 0, Math.PI * 2);
+                ctx.arc(cx, cy, radius * 1.55, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -1748,8 +1811,7 @@
             ctx.arc(cx, cy, radius - 0.5, 0, Math.PI * 2);
             ctx.clip();
 
-            const litColor = (phaseIndex === 4) ? '#eef7ff' : '#c8e4ff';
-            ctx.fillStyle = litColor;
+            ctx.fillStyle = (phaseIndex === 4) ? '#f0f8ff' : '#cbe5ff';
 
             if (phaseIndex === 4) {
                 ctx.beginPath();
@@ -1769,7 +1831,7 @@
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, -Math.PI / 2, Math.PI / 2, false);
                 ctx.fill();
-                ctx.fillStyle = '#182232';
+                ctx.fillStyle = '#141d2e';
                 ctx.beginPath();
                 ctx.ellipse(cx, cy, radius * 0.55, radius, 0, 0, Math.PI * 2);
                 ctx.fill();
@@ -1791,7 +1853,7 @@
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius, Math.PI / 2, -Math.PI / 2, false);
                 ctx.fill();
-                ctx.fillStyle = '#182232';
+                ctx.fillStyle = '#141d2e';
                 ctx.beginPath();
                 ctx.ellipse(cx, cy, radius * 0.55, radius, 0, 0, Math.PI * 2);
                 ctx.fill();
@@ -1806,45 +1868,58 @@
             const h = this.bitmap.height;
 
             ctx.clearRect(0, 0, w, h);
-
             ctx.save();
-            ctx.fillStyle = 'rgba(12, 16, 24, 0.88)';
-            ctx.strokeStyle = '#c5a059';
+
+            // Fundo em gradiente escuro com moldura dourada Xianxia
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+            bgGrad.addColorStop(0, 'rgba(14, 20, 32, 0.90)');
+            bgGrad.addColorStop(1, 'rgba(8, 12, 20, 0.92)');
+            ctx.fillStyle = bgGrad;
+            ctx.strokeStyle = '#c8a45d';
             ctx.lineWidth = 1.5;
 
-            const r = 8;
+            const r = 9;
             ctx.beginPath();
-            ctx.moveTo(r, 0);
-            ctx.lineTo(w - r, 0);
-            ctx.quadraticCurveTo(w, 0, w, r);
-            ctx.lineTo(w, h - r);
-            ctx.quadraticCurveTo(w, h, w - r, h);
-            ctx.lineTo(r, h);
-            ctx.quadraticCurveTo(0, h, 0, h - r);
-            ctx.lineTo(0, r);
-            ctx.quadraticCurveTo(0, 0, r, 0);
+            ctx.moveTo(r, 1);
+            ctx.lineTo(w - r, 1);
+            ctx.quadraticCurveTo(w - 1, 1, w - 1, r);
+            ctx.lineTo(w - 1, h - r);
+            ctx.quadraticCurveTo(w - 1, h - 1, w - r, h - 1);
+            ctx.lineTo(r, h - 1);
+            ctx.quadraticCurveTo(1, h - 1, 1, h - r);
+            ctx.lineTo(1, r);
+            ctx.quadraticCurveTo(1, 1, r, 1);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
 
             const currentHour = this._lastHour;
             const isDay = currentHour >= 6 && currentHour < 18;
-            const iconX = 24;
-            const iconY = 25;
+            const iconX = 25;
+            const iconY = 27;
 
             if (isDay) {
-                ctx.fillStyle = '#ffcc00';
+                const sunGlow = ctx.createRadialGradient(iconX, iconY, 4, iconX, iconY, 16);
+                sunGlow.addColorStop(0, 'rgba(255, 210, 80, 0.45)');
+                sunGlow.addColorStop(1, 'rgba(255, 170, 30, 0.0)');
+                ctx.fillStyle = sunGlow;
                 ctx.beginPath();
-                ctx.arc(iconX, iconY, 10, 0, Math.PI * 2);
+                ctx.arc(iconX, iconY, 16, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.strokeStyle = '#ff9900';
+
+                ctx.fillStyle = '#ffd23b';
+                ctx.beginPath();
+                ctx.arc(iconX, iconY, 9.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ff9d1a';
                 ctx.lineWidth = 1.5;
                 for (let a = 0; a < 8; a++) {
                     const ang = (a * Math.PI) / 4;
-                    const x1 = iconX + Math.cos(ang) * 12;
-                    const y1 = iconY + Math.sin(ang) * 12;
-                    const x2 = iconX + Math.cos(ang) * 15;
-                    const y2 = iconY + Math.sin(ang) * 15;
+                    const x1 = iconX + Math.cos(ang) * 11.5;
+                    const y1 = iconY + Math.sin(ang) * 11.5;
+                    const x2 = iconX + Math.cos(ang) * 14.5;
+                    const y2 = iconY + Math.sin(ang) * 14.5;
                     ctx.beginPath();
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
@@ -1866,13 +1941,13 @@
             ctx.fillStyle = '#ffffff';
             ctx.shadowColor = '#000000';
             ctx.shadowBlur = 4;
-            ctx.fillText(timeStr, 48, 23);
+            ctx.fillText(timeStr, 48, 24);
 
             const subLabel = (!isDay) ? `${moonName} • Dia ${dayCount}` : `${lightInfo.label} • Dia ${dayCount}`;
             ctx.font = '11px sans-serif';
-            ctx.fillStyle = (!isDay) ? '#b8d8ff' : '#dcdcdc';
+            ctx.fillStyle = (!isDay) ? '#b8d8ff' : '#e4d6b8';
             ctx.shadowBlur = 2;
-            ctx.fillText(subLabel, 48, 39);
+            ctx.fillText(subLabel, 48, 41);
 
             ctx.restore();
             this.bitmap._baseTexture.update();
@@ -1900,15 +1975,15 @@
         getDay: () => $gameSystem ? $gameSystem.dayNightDay() : 1,
         getMoonPhase: () => $gameSystem ? $gameSystem.dayNightMoonPhase() : startMoonPhase,
         getMoonName: () => $gameSystem ? $gameSystem.dayNightMoonName() : "Quarto Crescente",
-        setMoonPhase: (p) => { if ($gameSystem)$gameSystem.setMoonPhase(p); },
+        setMoonPhase: (p) => { if ($gameSystem) $gameSystem.setMoonPhase(p); },
         isNight: () => $gameSystem ? $gameSystem.isNight() : false,
-        setTime: (h, m) => { if ($gameSystem)$gameSystem.setTime(h, m); },
-        addTime: (h, m) => { if ($gameSystem)$gameSystem.addTime(h, m); },
-        pause: () => { if ($gameSystem)$gameSystem.setTimePaused(true); },
-        resume: () => { if ($gameSystem)$gameSystem.setTimePaused(false); },
-        version: "1.3.0"
+        setTime: (h, m) => { if ($gameSystem) $gameSystem.setTime(h, m); },
+        addTime: (h, m) => { if ($gameSystem) $gameSystem.addTime(h, m); },
+        pause: () => { if ($gameSystem) $gameSystem.setTimePaused(true); },
+        resume: () => { if ($gameSystem) $gameSystem.setTimePaused(false); },
+        version: "2.0.0"
     };
 
-    console.log(`${pluginName} [v1.3.0]: Plugin carregado com sucesso.`);
+    console.log(`${pluginName} [v2.0.0]: Plugin carregado com sucesso.`);
 
 })();
