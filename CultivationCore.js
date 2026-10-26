@@ -1330,6 +1330,19 @@
                 }
             }
 
+            // Risco ambiental de Demônio Interno (15%) ao meditar em Pântano de Sangue Divino sem afinidade demoníaca/sanguínea
+            if (isActiveMeditation && !this.cultivation.groundArrayActive && this.cultivation.stabilizationBuffTimer <= 0) {
+                const envCheck = this.getEnvironmentSummary();
+                const isBloodCompatible = (tech.id === "primal_beast_blood" || tech.element === "darkness" || tech.element === "chaos");
+                if (envCheck.scarType === 3 && !isBloodCompatible) {
+                    if (Math.random() < (0.15 / 60)) {
+                        this.cultivation.deviationPoints = Math.min(100, this.cultivation.deviationPoints + 4.5);
+                        this.updateDeviationTier();
+                        this.addToast("🩸 [Demônio Interno] O Sha Qi do Pântano de Sangue Divino invade sua mente (+Desvio de Qi)!", "#ff7675");
+                    }
+                }
+            }
+
             if (compat.riskLevel === 0) {
                 // Reduz pontos de desvio lentamente se estiver cultivando em harmonia
                 if (this.cultivation.deviationPoints > 0) {
@@ -1650,10 +1663,72 @@
             const env = this.getEnvironmentSummary();
             this.addSkillExp("soulPerception", 20);
 
+            // Recompensas Supremas em Reinos Secretos (Dongtian, Tumbas de Jade, Fendas Espaciais)
+            if (env.poiType >= 5 && env.poiType <= 7) {
+                const mgr = globalThis.OverworldChunkManager;
+                const ow = mgr ? mgr.getOverworldCoordinates() : { x: env.coords.x, y: env.coords.y };
+                const nodeKey = `${ow.x},${ow.y}`;
+                const depleted = mgr && mgr._secretRealmsState && mgr._secretRealmsState.depletedNodes
+                    ? mgr._secretRealmsState.depletedNodes[nodeKey]
+                    : false;
+
+                if (!depleted) {
+                    if (mgr && mgr._secretRealmsState && mgr._secretRealmsState.depletedNodes) {
+                        mgr._secretRealmsState.depletedNodes[nodeKey] = true;
+                    }
+                    if (env.poiType === 5) {
+                        // Dongtian Cíclico: Ervas Milenares e Heranças de Linhagem!
+                        this.materials.spiritHerbs += 6;
+                        this.materials.qiPills += 2;
+                        const heritages = ["true_dragon", "cosmic_phoenix", "qilin_sacred", "immortal_emperor"];
+                        const pick = heritages[(ow.x + ow.y) % heritages.length];
+                        this.absorbHeritage(pick);
+                        this.addToast(`✨ [Reino Secreto Dongtian] Você colheu 6x Ervas Milenares e absorveu uma Herança Ancestral!`, "#ffd700");
+                    } else if (env.poiType === 6) {
+                        // Tumba de Jade Selada: Artefatos, Pedras de Matriz e Pílulas Antigas
+                        this.materials.arrayStones += 3;
+                        this.materials.testingStones += 2;
+                        this.materials.calmingPills += 2;
+                        this.addQiExp(180);
+                        this.addToast(`🗿 [Tumba Ancestral] Você desenterrou 3x Pedras de Matriz, 2x Pedras de Teste e Relíquias de Qi (+180 Exp)!`, "#a29bfe");
+                    } else {
+                        // Fenda Espacial: Cristais do Vazio e Núcleos
+                        this.materials.spiritOres += 5;
+                        this.materials.beastCores = (this.materials.beastCores || 0) + 2;
+                        this.addSoulExp(120);
+                        this.addToast(`🌌 [Fenda Espacial] Você extraiu 5x Cristais Dimensionais e 2x Núcleos do Vazio (+120 Exp Alma)!`, "#81ecec");
+                    }
+                    SoundManager.playUseItem();
+                    return;
+                }
+            }
+
+            // Bônus especial de sondagem em Cicatrizes Antigas e Veias de Dragão!
+            if (env.scarType === 1) {
+                this.materials.spiritOres += 3;
+                this.addSkillExp("smithing", 35);
+                this.addToast(`⚔️ [Ravina de Espada] Você extraiu 3x Fragmentos de Metal Imortal impregnados de Intenção de Espada!`, "#81ecec");
+                SoundManager.playUseItem();
+                return;
+            } else if (env.scarType === 2) {
+                this.materials.spiritOres += 2;
+                this.materials.spiritHerbs += 2;
+                this.addBodyExp(60);
+                this.addToast(`✋ [Cratera da Palma Celestial] Você colheu Lótus dos Cinco Dedos e Rocha de Gravidade Tripla (+60 Exp Corpo)!`, "#fab1a0");
+                SoundManager.playUseItem();
+                return;
+            } else if (env.scarType === 3) {
+                this.materials.spiritHerbs += 3;
+                this.materials.beastCores = (this.materials.beastCores || 0) + 1;
+                this.addToast(`🩸 [Pântano de Sangue Divino] Você colheu 3x Frutas de Sangue Demoníaco e 1x Essência Sanguínea Ancestral!`, "#ff7675");
+                SoundManager.playUseItem();
+                return;
+            }
+
             const roll = Math.random();
             if (roll < 0.35) {
                 this.materials.spiritHerbs += 2;
-                this.addToast(`🌿 Você sondou o bioma (${env.biomeLabel}) e colheu 2x Ervas Espirituais!`, "#55efc4");
+                this.addToast(`🌿 Você sondou [${env.biomeLabel}] e colheu 2x Ervas Espirituais!`, "#55efc4");
             } else if (roll < 0.65) {
                 this.materials.spiritOres += 2;
                 this.addToast(`⛏️ Você extraiu 2x Minérios Espirituais da altitude ${env.height}m!`, "#74b9ff");
@@ -1865,6 +1940,10 @@
             let height = 100;
             let temp = 24;
             let humidity = 50;
+            let qiDensity = 50;
+            let scarType = 0;
+            let wuxingElement = 0;
+            let poiType = 0;
             let biomeLabel = "Planície Espiritual";
             const activeBonuses = [];
 
@@ -1899,37 +1978,71 @@
                 activeBonuses.push("Lua Cheia Celestial (+80%)");
             }
 
-            // Altitude e Bioma Procedural
+            // Altitude, Veia de Dragão, Elementos Wuxing e Cicatrizes do WorldClimateEngine
             const coords = (globalThis.BasicChunkGenerator && globalThis.BasicChunkGenerator.getRealPlayerCoordinates)
                 ? globalThis.BasicChunkGenerator.getRealPlayerCoordinates()
                 : { x: $gamePlayer ? $gamePlayer.x : 0, y: $gamePlayer ? $gamePlayer.y : 0 };
 
-            if (globalThis.PerlinNoiseGenerator && globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords) {
-                const env = globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords(coords.x, coords.y);
-                if (env) {
-                    height = Math.round(env.height || 100);
-                    temp = Math.round(env.temperature || 24);
-                    humidity = Math.round(env.humidity || 50);
+            let env = null;
+            if (globalThis.WorldClimateEngine && typeof globalThis.WorldClimateEngine.getEnvironmentDataForCoords === "function") {
+                env = globalThis.WorldClimateEngine.getEnvironmentDataForCoords(coords.x, coords.y);
+            } else if (globalThis.PerlinNoiseGenerator && globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords) {
+                env = globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords(coords.x, coords.y);
+            }
+
+            if (env) {
+                height = Math.round(env.height ?? 100);
+                temp = Math.round(env.temperature ?? env.temp ?? 24);
+                humidity = Math.round(env.humidity ?? 50);
+                qiDensity = Math.round(env.qiDensity ?? 50);
+                scarType = env.scarType || 0;
+                wuxingElement = env.wuxingElement || 0;
+                poiType = env.poiType || 0;
+                if (poiType === 0 && globalThis.OverworldChunkManager && typeof globalThis.OverworldChunkManager.getSpontaneousRiftAt === "function") {
+                    const owCoords = globalThis.OverworldChunkManager.getOverworldCoordinates();
+                    if (globalThis.OverworldChunkManager.getSpontaneousRiftAt(owCoords.x, owCoords.y)) {
+                        poiType = 7;
+                    }
                 }
+                if (env.biomeName) biomeLabel = env.biomeName;
             } else if ($gameVariables) {
                 height = $gameVariables.value(1) || 100;
                 temp = $gameVariables.value(2) || 24;
                 humidity = $gameVariables.value(3) || 50;
             }
 
+            // Bônus da Veia de Dragão (Ling Mai)
+            if (qiDensity >= 65) {
+                const veinBonus = Number(((qiDensity - 50) / 40).toFixed(2));
+                mult += veinBonus;
+                activeBonuses.push(`Veia de Dragão [Qi ${qiDensity}] (+${Math.round(veinBonus * 100)}%)`);
+            }
+
+            // Bônus das Cicatrizes de Batalhas Antigas
+            if (scarType === 1) {
+                mult += 2.50;
+                activeBonuses.push("Ravina de Intenção de Espada (+250% Dao Metal/Espada)");
+            } else if (scarType === 2) {
+                mult += 2.00;
+                activeBonuses.push("Cratera da Palma Celestial (Gravidade 3x / +200% Têmpera Corporal)");
+            } else if (scarType === 3) {
+                mult += 1.60;
+                activeBonuses.push("Pântano de Sangue Divino (+160% Sha Qi / 15% Risco Demônio Interno)");
+            }
+
             if (height >= 450) {
                 const altBonus = Math.min(1.2, (height - 300) / 350);
                 mult += altBonus;
-                biomeLabel = temp < 10 ? "Pico Nevado Imortal" : "Cordilheira Espiritual Alta";
+                if (!env?.biomeName) biomeLabel = temp < 10 ? "Pico Nevado Imortal" : "Cordilheira Espiritual Alta";
                 activeBonuses.push(`Altitude Elevada (+${Math.round(altBonus * 100)}%)`);
             } else if (height < 0) {
-                biomeLabel = "Vale / Leito Aquático";
+                if (!env?.biomeName) biomeLabel = "Vale / Leito Aquático";
                 if (tech.element === "water" || tech.element === "ice") {
                     mult += 0.40;
                     activeBonuses.push("Ressonância Aquática (+40%)");
                 }
             } else if (humidity >= 70) {
-                biomeLabel = "Floresta Antiga de Qi";
+                if (!env?.biomeName) biomeLabel = "Floresta Antiga de Qi";
                 if (tech.element === "wood") {
                     mult += 0.45;
                     activeBonuses.push("Vitalidade Silvestre (+45%)");
@@ -1948,6 +2061,10 @@
                 height,
                 temp,
                 humidity,
+                qiDensity,
+                scarType,
+                wuxingElement,
+                poiType,
                 biomeLabel,
                 totalMultiplier: Number(mult.toFixed(2)),
                 activeBonuses
@@ -3179,7 +3296,9 @@
 
             // Mapa & Relacionamentos
             this._subActions.setHandler("openProceduralMap", () => {
-                if (globalThis.Scene_WorldMap) {
+                if (globalThis.ProceduralWorldMap && typeof globalThis.ProceduralWorldMap.openWorldMap === "function") {
+                    globalThis.ProceduralWorldMap.openWorldMap();
+                } else if (globalThis.Scene_WorldMap) {
                     SceneManager.push(globalThis.Scene_WorldMap);
                 } else {
                     SoundManager.playOk();

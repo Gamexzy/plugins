@@ -10,15 +10,6 @@
  * de ruído normalizados são escalados para intervalos definidos nos parâmetros
  * e podem ser armazenados em variáveis do jogo para uso em eventos e scripts.
  *
- * @param -- Semente do Mundo --
- * @text --- Semente do Mundo ---
- *
- * @param World Seed
- * @text Semente do Mundo (Seed)
- * @type number
- * @desc Semente numérica para geração determinística (0 = aleatório a cada sessão).
- * @default 12345
- *
  * @param -- Altura --
  * @text --- Altura ---
  *
@@ -26,14 +17,14 @@
  * @text Escala Base do Ruído (Altura)
  * @type number
  * @decimals 4
- * @desc Controla o zoom da altura. Valores menores = massas continentais e planícies maiores.
- * @default 0.0120
+ * @desc Controla o "zoom" da primeira octava da altura. Valores menores = feições maiores (continentes, oceanos).
+ * @default 0.025
  *
  * @param Height Number of Octaves
  * @text Número de Octavas (Altura)
  * @type number
  * @decimals 2
- * @desc Quantas camadas de ruído combinar para relevo (montanhas, colinas).
+ * @desc Quantas camadas de ruído combinar para detalhes da altura (montanhas, colinas).
  * @default 4
  *
  * @param Height Lacunarity
@@ -54,15 +45,15 @@
  * @text Valor Mínimo da Altura
  * @type number
  * @decimals 2
- * @desc O valor mínimo para a altura escalada (ex: -320 para oceanos naturais).
- * @default -320
+ * @desc O valor mínimo para a altura escalada (ex: -100 para metros). Usado na lógica de bioma.
+ * @default -100
  *
  * @param Max Height Value
  * @text Valor Máximo da Altura
  * @type number
  * @decimals 2
- * @desc O valor máximo para a altura escalada (ex: 480 para montanhas).
- * @default 480
+ * @desc O valor máximo para a altura escalada (ex: 1000 para metros). Usado na lógica de bioma.
+ * @default 1000
  *
  * @param -- Temperatura --
  * @text --- Temperatura ---
@@ -71,15 +62,15 @@
  * @text Escala Base do Ruído (Temperatura)
  * @type number
  * @decimals 4
- * @desc Escala do ruído de temperatura. Valores menores = faixas climáticas contínuas e amplas.
- * @default 0.0070
+ * @desc Escala do ruído para a temperatura.
+ * @default 0.015
  *
  * @param Temp Number of Octaves
  * @text Número de Octavas (Temperatura)
  * @type number
  * @decimals 2
- * @desc Quantas camadas de ruído combinar para temperatura.
- * @default 2
+ * @desc Quantas camadas de ruído combinar para detalhes da temperatura.
+ * @default 4
  *
  * @param Temp Lacunarity
  * @text Lacunaridade (Temperatura)
@@ -99,22 +90,22 @@
  * @text Valor Mínimo da Temperatura
  * @type number
  * @decimals 2
- * @desc O valor mínimo de temperatura em °C.
- * @default -5
+ * @desc O valor mínimo para a temperatura escalada (ex: -20 para °C). Usado na lógica de bioma.
+ * @default -20
  *
  * @param Max Temp Value
  * @text Valor Máximo da Temperatura
  * @type number
  * @decimals 2
- * @desc O valor máximo de temperatura em °C.
- * @default 48
+ * @desc O valor máximo para a temperatura escalada (ex: 100 para °C). Usado na lógica de bioma.
+ * @default 100
  *
  * @param Temp Lapse Rate
  * @text Taxa de Lapso de Temperatura
  * @type number
  * @decimals 4
- * @desc Queda de temperatura por metro de altitude (resfria montanhas sem congelar o mundo).
- * @default 0.022
+ * @desc Quanto a temperatura diminui por unidade de altura (ex: 0.0065 para 0.0065 °C/metro).
+ * @default 0.065
  *
  * @param -- Umidade --
  * @text --- Umidade ---
@@ -123,15 +114,15 @@
  * @text Escala Base do Ruído (Umidade)
  * @type number
  * @decimals 4
- * @desc Escala do ruído de umidade. Valores menores = biomas de chuva coesos e orgânicos.
- * @default 0.0100
+ * @desc Escala do ruído para a umidade.
+ * @default 0.02
  *
  * @param Humidity Number of Octaves
  * @text Número de Octavas (Umidade)
  * @type number
  * @decimals 2
- * @desc Quantas camadas de ruído combinar para umidade.
- * @default 2
+ * @desc Quantas camadas de ruído combinar para detalhes da umidade.
+ * @default 4
  *
  * @param Humidity Lacunarity
  * @text Lacunaridade (Umidade)
@@ -151,54 +142,90 @@
  * @text Valor Mínimo da Umidade
  * @type number
  * @decimals 2
- * @desc O valor mínimo para a umidade escalada (0 a 100%).
+ * @desc O valor mínimo para a umidade escalada (ex: 0 para %). Usado na lógica de bioma.
  * @default 0
  *
  * @param Max Humidity Value
  * @text Valor Máximo da Umidade
  * @type number
  * @decimals 2
- * @desc O valor máximo para a umidade escalada (0 a 100%).
+ * @desc O valor máximo para a umidade escalada (ex: 100 para %). Usado na lógica de bioma.
  * @default 100
  *
- * @param -- Biomas e Desniveis 1:1 --
- * @text --- Biomas e Desníveis 1:1 ---
+ * @param -- Biomas e Tiles --
+ * @text --- Biomas e Tiles ---
  *
- * @param River Tile ID
- * @text ID do Tile (Rio/Água)
+ * @param Sea Tile ID
+ * @text ID do Tile (Mar)
  * @type number
- * @desc ID do tile para rios e cursos de água (Exterior Outside_A1: 2048).
- * @default 2048
- *
- * @param Tier 0 Tile ID
- * @text ID do Andar 0 (Vale/Planície)
- * @type number
- * @desc ID do tile para o chão plano mais baixo (Outside_A2 Meadow: 2816).
+ * @desc ID do tile para áreas de mar.
  * @default 2816
  *
- * @param Tier 1 Tile ID
- * @text ID do Andar 1 (Platô Médio)
+ * @param Coast Tile ID
+ * @text ID do Tile (Costa)
  * @type number
- * @desc ID do tile para a superfície do primeiro platô (Outside_A2 Dark Meadow: 2864).
- * @default 2864
+ * @desc ID do tile para áreas de costa.
+ * @default 2817
  *
- * @param Tier 2 Tile ID
- * @text ID do Andar 2 (Platô Alto/Montanha)
+ * @param Land Tile ID
+ * @text ID do Tile (Terra)
  * @type number
- * @desc ID do tile para a superfície do platô mais elevado (Outside_A2 Dirt/Stone: 2912).
- * @default 2912
+ * @desc ID do tile para áreas de terra.
+ * @default 2818
  *
- * @param Cliff 1 Tile ID
- * @text ID Paredão Desnível 1
+ * @param Mountain Tile ID
+ * @text ID do Tile (Montanha)
  * @type number
- * @desc ID do paredão vertical para o desnível do Andar 1 (Outside_A4 Ledge A Face: 8000).
- * @default 8000
+ * @desc ID do tile para áreas de montanha.
+ * @default 2819
  *
- * @param Cliff 2 Tile ID
- * @text ID Paredão Desnível 2
+ * @param Desert Tile ID
+ * @text ID do Tile (Deserto)
  * @type number
- * @desc ID do paredão vertical para o desnível do Andar 2 (Outside_A4 Ledge B Face: 8048).
- * @default 8048
+ * @desc ID do tile para áreas de deserto (quente e seco).
+ * @default 2820
+ *
+ * @param Forest Tile ID
+ * @text ID do Tile (Floresta)
+ * @type number
+ * @desc ID do tile para áreas de floresta (temperado e úmido).
+ * @default 2821
+ *
+ * @param Snowy Tile ID
+ * @text ID do Tile (Neve)
+ * @type number
+ * @desc ID do tile para áreas nevadas (frio e seco).
+ * @default 2822
+ *
+ * @param Icy Water Tile ID
+ * @text ID do Tile (Água Congelada)
+ * @type number
+ * @desc ID do tile para áreas de água congelada (muito frio).
+ * @default 2823
+ *
+ * @param Swamp Tile ID
+ * @text ID do Tile (Pântano)
+ * @type number
+ * @desc ID do tile para áreas de pântano (quente e úmido).
+ * @default 2824
+ *
+ * @param Tundra Tile ID
+ * @text ID do Tile (Tundra)
+ * @type number
+ * @desc ID do tile para áreas de tundra (frio e moderadamente úmido).
+ * @default 2825
+ *
+ * @param Savanna Tile ID
+ * @text ID do Tile (Savana)
+ * @type number
+ * @desc ID do tile para áreas de savana (quente e seco a moderado).
+ * @default 2826
+ *
+ * @param Jungle Tile ID
+ * @text ID do Tile (Selva)
+ * @type number
+ * @desc ID do tile para áreas de selva (quente e muito úmido).
+ * @default 2827
  *
  * @param debugMode
  * @text Modo de Depuração
@@ -213,58 +240,45 @@
     const pluginName = "PerlinNoiseGenerator";
     const parameters = PluginManager.parameters(pluginName);
 
-    // --- Semente do Mundo ---
-    const worldSeed = Number(parameters['World Seed'] !== undefined ? parameters['World Seed'] : 12345);
-
-    // --- Parâmetros de Ruído (Calibrados para Continentes Orgânicos & Vastas Planícies) ---
-    const heightNoiseScale = Number(parameters['Height Noise Scale']) || 0.0120;
+    // --- Parâmetros de Ruído ---
+    const heightNoiseScale = Number(parameters['Height Noise Scale']) || 0.025;
     const heightNumOctaves = Number(parameters['Height Number of Octaves']) || 4;
     const heightLacunarity = Number(parameters['Height Lacunarity']) || 2.0;
     const heightPersistence = Number(parameters['Height Persistence']) || 0.5;
-    const minHeightValue = Number(parameters['Min Height Value'] !== undefined ? parameters['Min Height Value'] : -320);
-    const maxHeightValue = Number(parameters['Max Height Value'] !== undefined ? parameters['Max Height Value'] : 480);
+    const minHeightValue = Number(parameters['Min Height Value']) || -100;
+    const maxHeightValue = Number(parameters['Max Height Value']) || 1000;
 
-    const tempNoiseScale = Number(parameters['Temp Noise Scale']) || 0.0070;
-    const tempNumOctaves = Number(parameters['Temp Number of Octaves']) || 2;
+    const tempNoiseScale = Number(parameters['Temp Noise Scale']) || 0.015;
+    const tempNumOctaves = Number(parameters['Temp Number of Octaves']) || 4;
     const tempLacunarity = Number(parameters['Temp Lacunarity']) || 2.0;
     const tempPersistence = Number(parameters['Temp Persistence']) || 0.5;
-    const minTempValue = Number(parameters['Min Temp Value'] !== undefined ? parameters['Min Temp Value'] : -5);
-    const maxTempValue = Number(parameters['Max Temp Value'] !== undefined ? parameters['Max Temp Value'] : 48);
-    const tempLapseRate = Number(parameters['Temp Lapse Rate'] !== undefined ? parameters['Temp Lapse Rate'] : 0.022);
+    const minTempValue = Number(parameters['Min Temp Value']) || -20;
+    const maxTempValue = Number(parameters['Max Temp Value']) || 100;
+    const tempLapseRate = Number(parameters['Temp Lapse Rate']) || 0.065;
 
-    const humidityNoiseScale = Number(parameters['Humidity Noise Scale']) || 0.0100;
-    const humidityNumOctaves = Number(parameters['Humidity Number of Octaves']) || 2;
+    const humidityNoiseScale = Number(parameters['Humidity Noise Scale']) || 0.02;
+    const humidityNumOctaves = Number(parameters['Humidity Number of Octaves']) || 4;
     const humidityLacunarity = Number(parameters['Humidity Lacunarity']) || 2.0;
     const humidityPersistence = Number(parameters['Humidity Persistence']) || 0.5;
-    const minHumidityValue = Number(parameters['Min Humidity Value'] !== undefined ? parameters['Min Humidity Value'] : 0);
-    const maxHumidityValue = Number(parameters['Max Humidity Value'] !== undefined ? parameters['Max Humidity Value'] : 100);
+    const minHumidityValue = Number(parameters['Min Humidity Value']) || 0;
+    const maxHumidityValue = Number(parameters['Max Humidity Value']) || 100;
 
     const debugMode = String(parameters['debugMode'] || 'false') === 'true';
 
-    // --- IDs de Tiles (Escala 1:1 com Desníveis: Tileset 2 Exterior) ---
-    const riverTileId = Number(parameters['River Tile ID']) || 2048; // Rio / Água (Outside_A1)
-    const tier0TileId = Number(parameters['Tier 0 Tile ID']) || 2816; // Andar 0: Grama de Vale (Outside_A2 Meadow)
-    const tier1TileId = Number(parameters['Tier 1 Tile ID']) || 2864; // Andar 1: Platô 1 (Outside_A2 Dark Meadow)
-    const tier2TileId = Number(parameters['Tier 2 Tile ID']) || 2912; // Andar 2: Platô Alto (Outside_A2 Dirt/Stone)
-    const cliff1TileId = Number(parameters['Cliff 1 Tile ID']) || 8000; // Paredão Desnível 1 (Outside_A4 Ledge A Face)
-    const cliff2TileId = Number(parameters['Cliff 2 Tile ID']) || 8048; // Paredão Desnível 2 (Outside_A4 Ledge B Face)
 
-    // Aliases e compatibilidade
-    const seaTileId = riverTileId;
-    const coastTileId = riverTileId;
-    const landTileId = tier0TileId;
-    const hillsTileId = tier1TileId;
-    const mountainTileId = tier2TileId;
-    const snowPeakTileId = tier2TileId;
-    const beachTileId = tier0TileId;
-    const desertTileId = 3200;
-    const forestTileId = 2864;
-    const snowyTileId = 3296;
-    const icyWaterTileId = 2048;
-    const swampTileId = 2864;
-    const tundraTileId = 2912;
-    const savannaTileId = tier1TileId;
-    const jungleTileId = 2864;
+    // --- IDs de Tiles ---
+    const seaTileId = Number(parameters['Sea Tile ID']) || 2816;
+    const coastTileId = Number(parameters['Coast Tile ID']) || 2817;
+    const landTileId = Number(parameters['Land Tile ID']) || 2818;
+    const mountainTileId = Number(parameters['Mountain Tile ID']) || 2819;
+    const desertTileId = Number(parameters['Desert Tile ID']) || 2820;
+    const forestTileId = Number(parameters['Forest Tile ID']) || 2821;
+    const snowyTileId = Number(parameters['Snowy Tile ID']) || 2822;
+    const icyWaterTileId = Number(parameters['Icy Water Tile ID']) || 2823;
+    const swampTileId = Number(parameters['Swamp Tile ID']) || 2824;
+    const tundraTileId = Number(parameters['Tundra Tile ID']) || 2825;
+    const savannaTileId = Number(parameters['Savanna Tile ID']) || 2826;
+    const jungleTileId = Number(parameters['Jungle Tile ID']) || 2827;
 
 
     // ==========================================================================
@@ -321,28 +335,21 @@
         }
     }
 
-    // Tabela de Permutação (Inicializada uma vez, com suporte a World Seed determinístico)
+    // Tabela de Permutação (Inicializada uma vez)
     const p = (() => {
-        let seed = worldSeed;
-        function seededRandom() {
-            if (worldSeed <= 0) return Math.random();
-            seed = (seed * 9301 + 49297) % 233280;
-            return seed / 233280;
-        }
-
         const permutation = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
             permutation[i] = i;
         }
         for (let i = 255; i > 0; i--) {
-            const j = Math.floor(seededRandom() * (i + 1));
+            const j = Math.floor(Math.random() * (i + 1));
             [permutation[i], permutation[j]] = [permutation[j], permutation[i]];
         }
-        const pTable = new Uint8Array(512);
+        const p = new Uint8Array(512);
         for (let i = 0; i < 256; i++) {
-            pTable[i] = pTable[i + 256] = permutation[i];
+            p[i] = p[i + 256] = permutation[i];
         }
-        return pTable;
+        return p;
     })();
 
     // ==========================================================================
@@ -415,382 +422,170 @@
 
     /**
      * Determina o ID do tile com base nos valores ESCALADOS de altura, temperatura e umidade.
-     * @param {number} scaledHeight - Valor de altura escalado (ex: -320 a 480).
-     * @param {number} scaledTemp - Valor de temperatura escalado (ex: -5 a 48).
-     * @param {number} scaledHumidity - Valor de umidade escalado (0 a 100).
+     * @param {number} scaledHeight - Valor de altura escalado (ex: -100 a 1000).
+     * @param {number} scaledTemp - Valor de temperatura escalado (ex: -20 a 100).
+     * @param {number} scaledHumidity - Valor de umidade escalado (ex: 0 a 100).
      * @returns {number} O ID do tile apropriado.
      */
     function getTileIdFromBiomes(scaledHeight, scaledTemp, scaledHumidity) {
-        // 1. Corpos d'água (Abaixo do nível do mar)
-        if (scaledHeight < 0) {
+        // Lógica de bioma baseada nos valores escalados.
+        // Os limites são baseados nos valores padrão dos parâmetros.
+
+        // Condições de Altura
+        if (scaledHeight < 0) { // Abaixo do "nível do mar"
+            if (scaledTemp < 5) { // Água muito fria
+                return icyWaterTileId;
+            }
+            return seaTileId;
+        } else if (scaledHeight < 10) { // Altura baixa, próxima ao nível do mar
+            return coastTileId;
+        } else if (scaledHeight > 500) { // Altura elevada (Montanhas)
+            // Montanhas podem ter neve no topo se for muito frio
             if (scaledTemp < 0) {
-                return icyWaterTileId; // Água congelada / banquisa polar
+                return snowyTileId; // Neve em montanhas altas
             }
-            return seaTileId; // Mar / Oceano
-        }
+            return mountainTileId;
+        } else { // Altura intermediária (terra)
+            // Condições de Temperatura e Umidade para biomas terrestres
 
-        // 2. Linha de Costa / Litoral (Transição terra-mar)
-        if (scaledHeight < 20) {
-            return coastTileId; // Praia / Costa
-        }
-
-        // 3. Montanhas e Cumes Elevados
-        if (scaledHeight > 220) {
-            if (scaledTemp < 10) {
-                return snowyTileId; // Cumes gelados com neve
+            // Tundra (Frio, umidade moderada)
+            if (scaledTemp < 0 && scaledHumidity >= 30 && scaledHumidity <= 60) {
+                return tundraTileId;
             }
-            return mountainTileId; // Montanhas rochosas
+            // Neve (Frio e geralmente mais seco)
+            if (scaledTemp < 5) {
+                 return snowyTileId;
+            }
+            // Deserto (Quente e seco)
+            if (scaledTemp > 30 && scaledHumidity < 30) {
+                return desertTileId;
+            }
+            // Savana (Quente, seco a moderado)
+            if (scaledTemp > 25 && scaledHumidity >= 20 && scaledHumidity <= 50) {
+                return savannaTileId;
+            }
+            // Pântano (Quente e muito úmido)
+            if (scaledTemp > 20 && scaledHumidity > 70) {
+                return swampTileId;
+            }
+            // Selva (Quente e extremamente úmido)
+            if (scaledTemp > 25 && scaledHumidity > 80) {
+                return jungleTileId;
+            }
+            // Floresta (Temperado e úmido)
+            if (scaledTemp >= 5 && scaledTemp <= 20 && scaledHumidity > 50) {
+                 return forestTileId;
+            }
+            // Padrão para terra se nenhum bioma específico for correspondido
+            return landTileId;
         }
-
-        // 4. Biomas Terrestres Continentais
-        // - Zonas de Frio Extremo
-        if (scaledTemp < 5) {
-            return snowyTileId; // Planícies gélidas
-        }
-        // - Zonas Subpolares / Frias (Taiga / Tundra)
-        if (scaledTemp < 13) {
-            return scaledHumidity > 52 ? forestTileId : tundraTileId;
-        }
-
-        // - Zonas Áridas e Quentes (Deserto e Savana)
-        if (scaledTemp > 24 && scaledHumidity < 38) {
-            return desertTileId; // Deserto arenoso
-        }
-        if (scaledTemp > 18 && scaledHumidity < 46) {
-            return savannaTileId; // Savana / estepe quente
-        }
-
-        // - Zonas Úmidas e Tropicais
-        if (scaledHumidity > 70) {
-            return scaledTemp > 20 ? swampTileId : forestTileId; // Pântano ou floresta densa
-        }
-        if (scaledHumidity > 50) {
-            return forestTileId; // Floresta temperada
-        }
-
-        // - Planície Temperada (Plains / Land)
-        // Espaço aberto dominante (~35-40% do continente), perfeito para vilas, estradas e exploração.
-        return landTileId;
     }
 
     /**
      * Determina o NOME do bioma com base nos valores ESCALADOS de altura, temperatura e umidade.
-     * Esta função é uma réplica exata da lógica de getLayersAt, retornando o nome do bioma.
+     * Esta função é uma réplica da lógica de getTileIdFromBiomes, mas retorna o nome do bioma.
      * @param {number} scaledHeight - Valor de altura escalado.
      * @param {number} scaledTemp - Valor de temperatura escalado.
      * @param {number} scaledHumidity - Valor de umidade escalado.
-     * @param {boolean} isRiver - Se o ponto é parte de um leito de rio meandroso.
-     * @returns {string} O nome do bioma (ex: "Plains", "Hills", "Mountain", "River").
+     * @returns {string} O nome do bioma (ex: "Floresta", "Deserto").
      */
-    function getBiomeNameFromEnvironmentalData(scaledHeight, scaledTemp, scaledHumidity, isRiver = false, level = 0, isCliff = false) {
-        if (isRiver || scaledHeight < 0) return "River";
-        if (isCliff) return "Cliff";
-        switch (level) {
-            case 0: return "Plains";
-            case 1: return "Plateau1";
-            case 2: return "Plateau2";
-            default: return "Plains";
-        }
-    }
-
-
-    // ==========================================================================
-    // Funções do Polidor Determinístico de Autotiles (Bitmask 47-Blob Solver)
-    // ==========================================================================
-
-    let _shapeMap = null;
-    function initShapeMap() {
-        if (_shapeMap) return;
-        _shapeMap = new Map();
-        const table = (typeof Tilemap !== 'undefined' && Tilemap.FLOOR_AUTOTILE_TABLE) ? Tilemap.FLOOR_AUTOTILE_TABLE : null;
-        if (table) {
-            for (let i = 0; i < table.length; i++) {
-                const key = table[i].map(q => q.join(',')).join('|');
-                _shapeMap.set(key, i);
+    function getBiomeNameFromEnvironmentalData(scaledHeight, scaledTemp, scaledHumidity) {
+        // A lógica é a mesma de getTileIdFromBiomes, mas retornando o nome.
+        if (scaledHeight < 0) {
+            if (scaledTemp < 5) {
+                return "Icy Water";
             }
-        }
-    }
-
-    /**
-     * Calcula o shape exato (0 a 47) com base na presença dos 8 vizinhos.
-     */
-    function getAutotileShape(n, s, e, w, nw, ne, sw, se) {
-        if (!n && !s && !e && !w) return 47; // Ilha isolada 1x1
-        initShapeMap();
-
-        const tl = (n && w) ? (nw ? [2, 4] : [2, 0]) : (!n && w) ? [2, 2] : (n && !w) ? [0, 4] : [0, 2];
-        const tr = (n && e) ? (ne ? [1, 4] : [3, 0]) : (!n && e) ? [1, 2] : (n && !e) ? [3, 4] : [3, 2];
-        const bl = (s && w) ? (sw ? [2, 3] : [2, 1]) : (!s && w) ? [2, 5] : (s && !w) ? [0, 3] : [0, 5];
-        const br = (s && e) ? (se ? [1, 3] : [3, 1]) : (!s && e) ? [1, 5] : (s && !e) ? [3, 3] : [3, 5];
-
-        const key = [tl, tr, bl, br].map(q => q.join(',')).join('|');
-        return _shapeMap ? (_shapeMap.get(key) || 0) : 0;
-    }
-
-    // Mapa de prioridades de sobreposição para a Camada 0 (Chão Base: Vales e Platôs)
-    const _priorityBase = {
-        [tier2TileId]: 30,
-        [tier1TileId]: 20,
-        [tier0TileId]: 10,
-        [riverTileId]: 0
-    };
-
-    function isWaterTile(tileId) {
-        return tileId === riverTileId;
-    }
-
-    function isLandTile(tileId) {
-        return tileId >= 2816 && tileId < 4352;
-    }
-
-    function isWallAutotile(tileId) {
-        if (!tileId || tileId < 2048) return false;
-        const kind = Math.floor((tileId - 2048) / 48);
-        if (tileId >= 4352 && tileId < 5888) return true;
-        if (tileId >= 5888 && tileId < 8192) {
-            const ty = Math.floor(kind / 8);
-            return (ty % 2 === 1);
-        }
-        return false;
-    }
-
-    function getWallAutotileShape(n, s, e, w) {
-        let shape = 0;
-        if (!w) shape += 1;
-        if (!n) shape += 2;
-        if (!e) shape += 4;
-        if (!s) shape += 8;
-        return shape; // 0 a 15 estritamente garantido
-    }
-
-    /**
-     * Conectividade nativa para a Camada 0 (Chão Base).
-     * Platôs mais altos cobrem o chão de baixo suavemente.
-     */
-    function isConnectableBase(centerBaseId, neighborBaseId) {
-        if (centerBaseId === neighborBaseId) return true;
-
-        const isWaterC = isWaterTile(centerBaseId);
-        const isWaterN = isWaterTile(neighborBaseId);
-        if (isWaterC && isWaterN) return true;
-        if (isWaterC !== isWaterN) return false;
-
-        const cp = _priorityBase[centerBaseId] ?? 0;
-        const np = _priorityBase[neighborBaseId] ?? 0;
-        return np >= cp;
-    }
-
-    /**
-     * Conectividade nativa para a Camada 1 (Paredões de Desnível / Falésias).
-     */
-    function isConnectableUpper(centerUpperId, neighborUpperId) {
-        if (!centerUpperId || !neighborUpperId) return false;
-        const cBase = Math.floor((centerUpperId - 2048) / 48) * 48 + 2048;
-        const nBase = Math.floor((neighborUpperId - 2048) / 48) * 48 + 2048;
-        return cBase === nBase;
-    }
-
-    // Mantém compatibilidade com chamadas externas
-    function isConnectable(centerBaseId, neighborBaseId) {
-        return isConnectableBase(centerBaseId, neighborBaseId);
-    }
-
-    // Parâmetros Topográficos de Escala 1:1 com Desníveis
-    const MACRO_SCALE = 0.0080;
-    const RIDGE_SCALE = 0.0160;
-    const RIVER_SCALE = 0.0110;
-    const RAMP_SCALE  = 0.0400; // Frequência de rampas naturais transitáveis
-
-    /**
-     * Amostra a elevação física contínua.
-     */
-    function getRawElevation(wx, wy) {
-        const baseN = getFractalNoise(wx, wy, MACRO_SCALE, 3, 2.0, 0.5);
-        if (baseN < -0.22) {
-            return (baseN + 0.22) * 300; // Depressão / Rio
-        }
-        const ridgeN = 1.0 - Math.abs(getFractalNoise(wx + 600, wy + 300, RIDGE_SCALE, 3, 2.0, 0.5));
-        const ground = 20 + (baseN + 0.22) * 150;
-        const mountain = Math.pow(Math.max(0, ridgeN - 0.48) / 0.52, 2.0) * 700;
-        return ground + mountain;
-    }
-
-    /**
-     * Converte elevação contínua em patamares de desnível (Andares/Platôs):
-     * Andar 0: Vale baixo (Grama)
-     * Andar 1: Platô elevado 1
-     * Andar 2: Platô alto 2 (Montanha)
-     */
-    function getRawLevel(elev) {
-        if (elev < 0) return -1; // Água
-        if (elev < 180) return 0; // Vale baixo
-        if (elev < 400) return 1; // Platô 1
-        return 2; // Platô 2 (Alto)
-    }
-
-    /**
-     * Amostra os dados ambientais físicos ({ height, temp, humidity, isRiver, level, isCliff, cliffTile }) para uma coordenada.
-     */
-    function sampleEnvironmentData(worldX, worldY) {
-        const elev = getRawElevation(worldX, worldY);
-
-        // Rio meandroso orgânico
-        let isRiver = false;
-        if (elev >= 15 && elev <= 400) {
-            const rN = Math.abs(getPerlinNoise((worldX + 550) * RIVER_SCALE, (worldY + 880) * RIVER_SCALE));
-            isRiver = (rN < 0.020);
-        }
-
-        const level = isRiver ? -1 : getRawLevel(elev);
-
-        // Desnível (Falésia / Ledge Face) e Rampas Naturais
-        let isCliff = false;
-        let cliffTile = 0;
-        if (level >= 0) {
-            const northElev = getRawElevation(worldX, worldY - 1);
-            const northLvl = getRawLevel(northElev);
-            if (northLvl > level) {
-                // Verifica ruído de rampa natural
-                const rampN = Math.abs(getPerlinNoise(worldX * RAMP_SCALE, worldY * RAMP_SCALE));
-                if (rampN >= 0.12) {
-                    isCliff = true;
-                    cliffTile = (northLvl >= 2) ? cliff2TileId : cliff1TileId;
-                }
+            return "Sea";
+        } else if (scaledHeight < 10) {
+            return "Coast";
+        } else if (scaledHeight > 500) {
+            if (scaledTemp < 0) {
+                return "Snowy"; // Snowy Mountain
             }
-        }
-
-        const tempNoise = (getFractalNoise(worldX + 1200, worldY + 600, 0.0050, 2, 2.0, 0.5) + 1) / 2;
-        let scaledTemp = 18 + tempNoise * 18;
-        if (elev > 0) scaledTemp -= elev * 0.0065;
-
-        const humNoise = (getFractalNoise(worldX + 2400, worldY + 1500, 0.0070, 2, 2.0, 0.5) + 1) / 2;
-        const scaledHumidity = humNoise * 100;
-
-        return {
-            height: elev,
-            temp: scaledTemp,
-            humidity: scaledHumidity,
-            isRiver: isRiver,
-            level: level,
-            isCliff: isCliff,
-            cliffTile: cliffTile
-        };
-    }
-
-    /**
-     * Amostra os biomas nas duas camadas para Escala 1:1 com Desníveis.
-     * Camada 0: Chão transitável do patamar.
-     * Camada 1: Paredão de falésia (Outside_A4) onde há desnível abrupto (bloqueado para passagem).
-     */
-    function getLayersAt(worldX, worldY) {
-        const env = sampleEnvironmentData(worldX, worldY);
-        let baseTile = 0;
-        let upperTile = 0;
-
-        if (env.isRiver || env.height < 0) {
-            baseTile = riverTileId;
+            return "Mountain";
         } else {
-            if (env.level === 0) baseTile = tier0TileId;
-            else if (env.level === 1) baseTile = tier1TileId;
-            else baseTile = tier2TileId;
-
-            // Se este ponto é o paredão de desnível contra o platô norte:
-            if (env.isCliff) {
-                upperTile = env.cliffTile;
+            if (scaledTemp < 0 && scaledHumidity >= 30 && scaledHumidity <= 60) {
+                return "Tundra";
             }
+            if (scaledTemp < 5) {
+                 return "Snowy"; // Snowy Land
+            }
+            if (scaledTemp > 30 && scaledHumidity < 30) {
+                return "Desert";
+            }
+            if (scaledTemp > 25 && scaledHumidity >= 20 && scaledHumidity <= 50) {
+                return "Savanna";
+            }
+            if (scaledTemp > 20 && scaledHumidity > 70) {
+                return "Swamp";
+            }
+            if (scaledTemp > 25 && scaledHumidity > 80) {
+                return "Jungle";
+            }
+            if (scaledTemp >= 5 && scaledTemp <= 20 && scaledHumidity > 50) {
+                 return "Forest";
+            }
+            return "Land"; // Default land biome
         }
-
-        return { baseTile, upperTile };
     }
 
-    /**
-     * Retorna o ID base (Shape 0) do tile gerado proceduralmente nas coordenadas globais.
-     */
-    function getBaseTileAt(worldX, worldY) {
-        const layers = getLayersAt(worldX, worldY);
-        return layers.upperTile || layers.baseTile;
-    }
 
     // ==========================================================================
-    // Função Principal de Geração de Chunk com Polimento Automático Nativo
+    // Função Principal de Geração de Chunk
     // ==========================================================================
 
     /**
-     * Gera os dados de tile para um chunk específico com autotiling perfeitamente calculado no padrão nativo do MZ.
+     * Gera os dados de tile para um chunk específico.
+     * Esta função é chamada pelo WorldGenerationCoordinator.
+     * @param {Object} chunkData - O objeto chunkData a ser preenchido.
+     * @returns {Object} O objeto chunkData preenchido.
      */
     function generateChunkData(chunkData) {
         const tiles = chunkData.tiles;
-        if (!chunkData.upperTiles) {
-            chunkData.upperTiles = Array(chunkData.height).fill(null).map(() => Array(chunkData.width).fill(0));
-        }
-        const upperTiles = chunkData.upperTiles;
-
         const chunkWidth = chunkData.width;
         const chunkHeight = chunkData.height;
         const chunkXReal = chunkData.chunkX;
         const chunkYReal = chunkData.chunkY;
 
-        // 1. Pré-calcula a grade de terrenos base e sobreposição com margem de 1 tile ao redor
-        const baseGrid = [];
-        const upperGrid = [];
-        for (let dy = -1; dy <= chunkHeight; dy++) {
-            baseGrid[dy + 1] = [];
-            upperGrid[dy + 1] = [];
-            for (let dx = -1; dx <= chunkWidth; dx++) {
-                const wx = chunkXReal * chunkWidth + dx;
-                const wy = chunkYReal * chunkHeight + dy;
-                const sample = getLayersAt(wx, wy);
-                baseGrid[dy + 1][dx + 1] = sample.baseTile;
-                upperGrid[dy + 1][dx + 1] = sample.upperTile;
-            }
-        }
-
-        // 2. Calcula o shape exato (0 a 47 para chão, 0 a 15 para paredes)
         for (let y = 0; y < chunkHeight; y++) {
             for (let x = 0; x < chunkWidth; x++) {
-                const gy = y + 1;
-                const gx = x + 1;
+                const worldX = chunkXReal * chunkWidth + x;
+                const worldY = chunkYReal * chunkHeight + y;
 
-                // --- LAYER 0 (Base: Chão e Rios) ---
-                const centerBase = baseGrid[gy][gx];
-                const n0  = isConnectableBase(centerBase, baseGrid[gy - 1][gx]);
-                const s0  = isConnectableBase(centerBase, baseGrid[gy + 1][gx]);
-                const e0  = isConnectableBase(centerBase, baseGrid[gy][gx + 1]);
-                const w0  = isConnectableBase(centerBase, baseGrid[gy][gx - 1]);
-                const nw0 = isConnectableBase(centerBase, baseGrid[gy - 1][gx - 1]);
-                const ne0 = isConnectableBase(centerBase, baseGrid[gy - 1][gx + 1]);
-                const sw0 = isConnectableBase(centerBase, baseGrid[gy + 1][gx - 1]);
-                const se0 = isConnectableBase(centerBase, baseGrid[gy + 1][gx + 1]);
+                // 1. Ruído de Altura e Escala
+                const heightNoise = getFractalNoise(
+                    worldX, worldY,
+                    heightNoiseScale, heightNumOctaves, heightLacunarity, heightPersistence
+                );
+                const normalizedHeight = (heightNoise + 1) / 2; // Normaliza para 0-1
+                let scaledHeight = minHeightValue + (maxHeightValue - minHeightValue) * normalizedHeight;
 
-                const shape0 = getAutotileShape(n0, s0, e0, w0, nw0, ne0, sw0, se0);
-                tiles[y][x] = centerBase >= 2048 ? (centerBase + shape0) : centerBase;
+                // 2. Ruído de Temperatura e Escala INICIAL
+                const tempNoise = getFractalNoise(
+                    worldX, worldY,
+                    tempNoiseScale, tempNumOctaves, tempLacunarity, tempPersistence
+                );
+                const normalizedTemp = (tempNoise + 1) / 2; // Normaliza para 0-1
+                let scaledTemp = minTempValue + (maxTempValue - minTempValue) * normalizedTemp;
 
-                // --- LAYER 1 (Sobreposição: Paredões de Desnível) ---
-                const centerUpper = upperGrid[gy][gx];
-                if (centerUpper > 0) {
-                    if (isWallAutotile(centerUpper)) {
-                        const nw = isConnectableUpper(centerUpper, upperGrid[gy][gx - 1]);
-                        const ne = isConnectableUpper(centerUpper, upperGrid[gy][gx + 1]);
-                        const nn = isConnectableUpper(centerUpper, upperGrid[gy - 1][gx]);
-                        const ns = isConnectableUpper(centerUpper, upperGrid[gy + 1][gx]);
-                        const shapeWall = getWallAutotileShape(nn, ns, ne, nw);
-                        upperTiles[y][x] = centerUpper + shapeWall;
-                    } else {
-                        const n1  = isConnectableUpper(centerUpper, upperGrid[gy - 1][gx]);
-                        const s1  = isConnectableUpper(centerUpper, upperGrid[gy + 1][gx]);
-                        const e1  = isConnectableUpper(centerUpper, upperGrid[gy][gx + 1]);
-                        const w1  = isConnectableUpper(centerUpper, upperGrid[gy][gx - 1]);
-                        const nw1 = isConnectableUpper(centerUpper, upperGrid[gy - 1][gx - 1]);
-                        const ne1 = isConnectableUpper(centerUpper, upperGrid[gy - 1][gx + 1]);
-                        const sw1 = isConnectableUpper(centerUpper, upperGrid[gy + 1][gx - 1]);
-                        const se1 = isConnectableUpper(centerUpper, upperGrid[gy + 1][gx + 1]);
-
-                        const shape1 = getAutotileShape(n1, s1, e1, w1, nw1, ne1, sw1, se1);
-                        upperTiles[y][x] = centerUpper >= 2048 ? (centerUpper + shape1) : centerUpper;
-                    }
-                } else {
-                    upperTiles[y][x] = 0;
+                // Ajusta a temperatura com base na altura
+                if (scaledHeight > 0) {
+                    scaledTemp -= scaledHeight * tempLapseRate;
                 }
+                scaledTemp = Math.max(minTempValue, Math.min(maxTempValue, scaledTemp));
+
+
+                // 3. Ruído de Umidade e Escala
+                const humidityNoise = getFractalNoise(
+                    worldX, worldY,
+                    humidityNoiseScale, humidityNumOctaves, humidityLacunarity, humidityPersistence
+                );
+                const normalizedHumidity = (humidityNoise + 1) / 2; // Normaliza para 0-1
+                let scaledHumidity = minHumidityValue + (maxHumidityValue - minHumidityValue) * normalizedHumidity;
+
+                const tileIdToApply = getTileIdFromBiomes(scaledHeight, scaledTemp, scaledHumidity);
+
+                tiles[y][x] = tileIdToApply;
             }
         }
         return chunkData;
@@ -808,7 +603,40 @@
      * @returns {Object} Um objeto contendo os valores ambientais escalados ({ height, temp, humidity }).
      */
     function getEnvironmentDataForCoords(realX, realY) {
-        return sampleEnvironmentData(realX, realY);
+         const heightNoise = getFractalNoise(
+            realX, realY,
+            heightNoiseScale, heightNumOctaves, heightLacunarity, heightPersistence
+         );
+         const normalizedHeight = (heightNoise + 1) / 2;
+         let scaledHeight = minHeightValue + (maxHeightValue - minHeightValue) * normalizedHeight;
+
+         const tempNoise = getFractalNoise(
+            realX, realY,
+            tempNoiseScale, tempNumOctaves, tempLacunarity, tempPersistence
+         );
+         const normalizedTemp = (tempNoise + 1) / 2;
+         let scaledTemp = minTempValue + (maxTempValue - minTempValue) * normalizedTemp;
+
+         // Ajusta a temperatura com base na altura para o EnvironmentVariableUpdater também
+         if (scaledHeight > 0) {
+            scaledTemp -= scaledHeight * tempLapseRate;
+         }
+         scaledTemp = Math.max(minTempValue, Math.min(maxTempValue, scaledTemp));
+
+
+         const humidityNoise = getFractalNoise(
+            realX, realY,
+            humidityNoiseScale, humidityNumOctaves, humidityLacunarity, humidityPersistence
+         );
+         const normalizedHumidity = (humidityNoise + 1) / 2;
+         let scaledHumidity = minHumidityValue + (maxHumidityValue - minHumidityValue) * normalizedHumidity;
+
+
+         return {
+             height: scaledHeight,
+             temp: scaledTemp,
+             humidity: scaledHumidity
+         };
     }
 
     /**
@@ -819,8 +647,8 @@
      * @returns {string} O nome do bioma (ex: "Floresta", "Deserto").
      */
     function getBiomeNameForCoords(realX, realY) {
-        const { height, temp, humidity, isRiver, tier, isShadow } = getEnvironmentDataForCoords(realX, realY);
-        return getBiomeNameFromEnvironmentalData(height, temp, humidity, isRiver, tier, isShadow);
+        const { height, temp, humidity } = getEnvironmentDataForCoords(realX, realY);
+        return getBiomeNameFromEnvironmentalData(height, temp, humidity);
     }
 
 
@@ -837,19 +665,10 @@
 
     window[pluginName] = {
         tileIds: { // IDs de tiles que o PerlinNoiseGenerator usa para gerar o $dataMap.data
-            tier0: tier0TileId,
-            tier1: tier1TileId,
-            tier2: tier2TileId,
-            cliff1: cliff1TileId,
-            cliff2: cliff2TileId,
-            river: riverTileId,
             sea: seaTileId,
             coast: coastTileId,
-            beach: beachTileId,
             land: landTileId,
-            hills: hillsTileId,
             mountain: mountainTileId,
-            snowPeak: snowPeakTileId,
             desert: desertTileId,
             forest: forestTileId,
             snowy: snowyTileId,
@@ -860,11 +679,7 @@
             jungle: jungleTileId
         },
         getEnvironmentDataForCoords: getEnvironmentDataForCoords, // Para EnvironmentVariableUpdater
-        getBiomeNameForCoords: getBiomeNameForCoords, // Para DynamicBiomeRenderer
-        getAutotileShape: getAutotileShape,
-        isConnectable: isConnectable,
-        getBaseTileAt: getBaseTileAt,
-        getLayersAt: getLayersAt
+        getBiomeNameForCoords: getBiomeNameForCoords // Para DynamicBiomeRenderer
     };
     globalThis[pluginName] = window[pluginName];
 

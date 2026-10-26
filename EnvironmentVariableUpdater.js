@@ -232,9 +232,9 @@
 
         // Hook para o movimento do jogador (garantir atualização após cada passo)
         const _Game_Player_update = Game_Player.prototype.update;
-        Game_Player.prototype.update = function() {
+        Game_Player.prototype.update = function(sceneActive) {
             const wasMoving = this.isMoving();
-            _Game_Player_update.call(this);
+            _Game_Player_update.apply(this, arguments);
             // Atualiza apenas se o jogador estava se movendo ou se moveu
             if (wasMoving || this.isMoving()) {
                 updateEnvironmentalVariables();
@@ -255,8 +255,18 @@
 
     // Exponha o objeto EnvironmentVariableUpdater globalmente para registro de provedores
     globalThis.EnvironmentVariableUpdater = {
-        registerDataProvider: registerDataProvider
+        registerDataProvider: registerDataProvider,
+        updateEnvironmentalVariables: updateEnvironmentalVariables,
+        _registeredDataProviders: _registeredDataProviders
     };
+
+    // Auto-registra WorldClimateEngine / PerlinNoiseGenerator caso tenham sido carregados antes deste plugin
+    if (globalThis.WorldClimateEngine && typeof globalThis.WorldClimateEngine.getEnvironmentDataForCoords === "function") {
+        registerDataProvider("WorldClimateEngine", (x, y) => globalThis.WorldClimateEngine.getEnvironmentDataForCoords(x, y));
+        registerDataProvider("PerlinNoiseGenerator", (x, y) => globalThis.WorldClimateEngine.getEnvironmentDataForCoords(x, y));
+    } else if (globalThis.PerlinNoiseGenerator && typeof globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords === "function") {
+        registerDataProvider("PerlinNoiseGenerator", (x, y) => globalThis.PerlinNoiseGenerator.getEnvironmentDataForCoords(x, y));
+    }
 
     if (debugMode) console.log(`${pluginName}: Plugin carregado.`);
 })();

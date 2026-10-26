@@ -73,7 +73,6 @@
      */
     function createInitialChunkData(chunkXReal, chunkYReal, mapId, chunkWidth, chunkHeight, fillTileId) {
         const tiles = Array(chunkHeight).fill(null).map(() => Array(chunkWidth).fill(fillTileId));
-        const upperTiles = Array(chunkHeight).fill(null).map(() => Array(chunkWidth).fill(0));
 
         const chunkData = {
             chunkX: chunkXReal,
@@ -82,7 +81,6 @@
             height: chunkHeight,
             mapId: mapId,
             tiles: tiles,
-            upperTiles: upperTiles,
 
             /**
              * Retorna o ID do tile em uma coordenada global "real" e camada,
@@ -156,27 +154,18 @@
 
         const generatedTilesList = [];
         const baseLayerTiles = chunkData.tiles;
-        const upperLayerTiles = chunkData.upperTiles;
 
         for(let y = 0; y < chunkData.height; y++) {
             for(let x = 0; x < chunkData.width; x++) {
                 const xGlobalReal = startXReal + x;
                 const yGlobalReal = startYReal + y;
 
-                if (baseLayerTiles && baseLayerTiles[y] !== undefined && baseLayerTiles[y][x] !== undefined) {
+                if (baseLayerTiles[y] !== undefined && baseLayerTiles[y][x] !== undefined) {
                     generatedTilesList.push({
                         x: xGlobalReal,
                         y: yGlobalReal,
                         layer: 0,
                         tileId: baseLayerTiles[y][x]
-                    });
-                }
-                if (upperLayerTiles && upperLayerTiles[y] !== undefined && upperLayerTiles[y][x] !== undefined) {
-                    generatedTilesList.push({
-                        x: xGlobalReal,
-                        y: yGlobalReal,
-                        layer: 1,
-                        tileId: upperLayerTiles[y][x]
                     });
                 }
             }

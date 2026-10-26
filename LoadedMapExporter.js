@@ -1,41 +1,21 @@
 /*:
  * @target MZ
- * @plugindesc Exporta os dados do mapa atualmente carregado para o console no formato do editor (JSON com formatação de dados exata). Permite gerar todos os 256x256 tiles antes de exportar.
+ * @plugindesc Exporta os dados do mapa atualmente carregado para o console no formato do editor (JSON com formatação de dados exata).
  * @author [Seu Nome Aqui]
- * @version 0.2.0 // Versão com geração completa de chunks (256x256 tiles) e auto-save
+ * @version 0.1.3 // Versão atualizada com formatação exata do array 'data'
  * @license MIT
  * @help
- * Este plugin adiciona comandos para exportar os dados de tile
- * do mapa para o console do navegador e salvar em arquivo JSON:
+ * Este plugin adiciona um comando de plugin para exportar os dados de tile
+ * do mapa atualmente carregado no jogo para o console do navegador.
+ * Os dados são formatados como um arquivo de mapa JSON do RPG Maker MZ,
+ * com o array 'data' formatado com quebras de linha a cada 'width' elementos,
+ * replicando o formato do editor.
  *
- * 1. ExportLoadedMapExactFormat:
- *    Exporta os tiles atualmente na memória do mapa.
- *
- * 2. GenerateAndExportFullMap:
- *    Gera proceduralmente TODOS os chunks do mapa inteiro (ex: 256x256 tiles = 65.536 tiles)
- *    e depois exporta o arquivo JSON completo formatado para o editor!
- *
- * ===========================================================================
- * Comandos de Console (F12)
- * ===========================================================================
- * Você pode simplesmente abrir o console (F12) e digitar:
- *   exportFullMap();            // Gera os 256x256 tiles e exporta/salva
- *   exportFullMap(true);        // Gera os 256x256 tiles centralizados no jogador
- *   exportLoadedMap();          // Exporta apenas os tiles já carregados
+ * Use o comando de plugin: ExportLoadedMapExactFormat
  *
  * @command ExportLoadedMapExactFormat
- * @text Exportar Mapa Carregado (Tiles Atuais)
- * @desc Exporta todos os dados do mapa atualmente carregado para o console e salva arquivo.
- *
- * @command GenerateAndExportFullMap
- * @text Gerar Mapa Inteiro e Exportar (256x256)
- * @desc Gera proceduralmente todos os chunks da grade completa do mapa e exporta o JSON inteiro.
- *
- * @arg centerOnPlayer
- * @text Centralizar no Jogador
- * @type boolean
- * @default false
- * @desc Se SIM, o mapa de 256x256 terá o jogador no centro. Se NÃO, gerará a partir das coordenadas mundiais (0,0).
+ * @text Exportar Mapa Carregado (Formato Exato)
+ * @desc Exporta todos os dados do mapa atualmente carregado para o console, formatando o array 'data' como o editor.
  */
 //=============================================================================
 
@@ -46,124 +26,11 @@
     // O array 'data' tem tamanho width * height * numberOfLayers
     const numberOfLayers = 4;
 
-    // --- Registro dos Comandos de Plugin e Exposição Global ---
+    // --- Registro do Comando de Plugin ---
     PluginManager.registerCommand(pluginName, "ExportLoadedMapExactFormat", args => {
         exportLoadedMapDataExactFormat();
     });
-
-    PluginManager.registerCommand(pluginName, "GenerateAndExportFullMap", args => {
-        const centerOnPlayer = String(args.centerOnPlayer || "false") === "true";
-        generateAndExportFullMap(centerOnPlayer);
-    });
-
-    window.LoadedMapExporter = {
-        export: exportLoadedMapDataExactFormat,
-        exportFullMap: generateAndExportFullMap,
-        generateAndExport: generateAndExportFullMap
-    };
-    window.exportLoadedMap = exportLoadedMapDataExactFormat;
-    window.exportFullMap = generateAndExportFullMap;
-
-    // Registra atalho de teclado F7 para gerar o mapa todo e exportar
-    Input.keyMapper[118] = "exportFullMapKey"; // F7
-
-    const _Scene_Map_update_for_exporter = Scene_Map.prototype.update;
-    Scene_Map.prototype.update = function() {
-        _Scene_Map_update_for_exporter.call(this);
-        if (Input.isTriggered("exportFullMapKey") && !$gameMessage.isBusy()) {
-            if (typeof SoundManager !== "undefined" && SoundManager.playSave) {
-                SoundManager.playSave();
-            }
-            generateAndExportFullMap(false);
-        }
-    };
-    // --- Fim Registro e Exposição Global ---
-
-    // Função para gerar todos os chunks do mapa completo e depois exportar
-    function generateAndExportFullMap(centerOnPlayer = false) {
-        if (!$gameMap || !$dataMap) {
-            console.warn(`${pluginName}: Jogo ou dados do mapa não carregados.`);
-            return;
-        }
-
-        const mapId = $gameMap.mapId();
-        const mapWidth = $gameMap.width();
-        const mapHeight = $gameMap.height();
-        const chunkWidth = globalThis.chunkWidth || 4;
-        const chunkHeight = globalThis.chunkHeight || 4;
-        const chunksX = Math.ceil(mapWidth / chunkWidth);
-        const chunksY = Math.ceil(mapHeight / chunkHeight);
-        const totalChunks = chunksX * chunksY;
-
-        console.log(`${pluginName}: Iniciando geração procedural completa do mapa (${mapWidth}x${mapHeight} tiles, ${chunksX}x${chunksY} = ${totalChunks} chunks)...`);
-
-        let startChunkX = 0;
-        let startChunkY = 0;
-
-        if (centerOnPlayer) {
-            const realCoords = globalThis.BasicChunkGenerator?.getRealPlayerCoordinates
-                ? globalThis.BasicChunkGenerator.getRealPlayerCoordinates()
-                : { x: $gamePlayer?.x || 0, y: $gamePlayer?.y || 0 };
-            const playerChunkX = Math.floor(realCoords.x / chunkWidth);
-            const playerChunkY = Math.floor(realCoords.y / chunkHeight);
-            startChunkX = playerChunkX - Math.floor(chunksX / 2);
-            startChunkY = playerChunkY - Math.floor(chunksY / 2);
-            console.log(`${pluginName}: Centralizando no jogador. Chunk inicial: (${startChunkX}, ${startChunkY}).`);
-        }
-
-        if (!globalThis.WorldGenerationCoordinator || !globalThis.WorldGenerationCoordinator.getChunkTiles) {
-            console.error(`${pluginName}: WorldGenerationCoordinator não encontrado. Impossível gerar chunks.`);
-            return;
-        }
-
-        const startTime = Date.now();
-        let chunksGenerated = 0;
-        let tilesPlaced = 0;
-
-        for (let cy = 0; cy < chunksY; cy++) {
-            for (let cx = 0; cx < chunksX; cx++) {
-                const chunkXReal = startChunkX + cx;
-                const chunkYReal = startChunkY + cy;
-
-                globalThis.WorldGenerationCoordinator.getChunkTiles(mapId, chunkXReal, chunkYReal, (tilesDataList) => {
-                    if (tilesDataList && tilesDataList.length > 0) {
-                        for (const tileInfo of tilesDataList) {
-                            const xGlobalReal = tileInfo.x;
-                            const yGlobalReal = tileInfo.y;
-                            const layer = tileInfo.layer || 0;
-                            const newTileId = tileInfo.tileId;
-
-                            // Converte para coordenadas dentro da grade 0..mapWidth-1 e 0..mapHeight-1
-                            const xWrapped = ((xGlobalReal % mapWidth) + mapWidth) % mapWidth;
-                            const yWrapped = ((yGlobalReal % mapHeight) + mapHeight) % mapHeight;
-
-                            const index = layer * mapWidth * mapHeight + yWrapped * mapWidth + xWrapped;
-                            if (index >= 0 && index < $dataMap.data.length) {
-                                $dataMap.data[index] = newTileId;
-                                tilesPlaced++;
-                            }
-                        }
-                    }
-                });
-
-                if (globalThis.ProceduralWorldMap && globalThis.ProceduralWorldMap.getExplorationManager) {
-                    globalThis.ProceduralWorldMap.getExplorationManager().markChunkExplored(chunkXReal, chunkYReal);
-                }
-
-                chunksGenerated++;
-            }
-        }
-
-        const elapsed = Date.now() - startTime;
-        console.log(`${pluginName}: Concluído! ${chunksGenerated} chunks (${tilesPlaced} tiles) gerados com sucesso em ${elapsed}ms.`);
-
-        if ($gameMap.requestRefresh) {
-            $gameMap.requestRefresh();
-        }
-
-        // Agora exporta o mapa completo com todos os 256x256 tiles preenchidos
-        exportLoadedMapDataExactFormat();
-    }
+    // --- Fim Registro do Comando de Plugin ---
 
     // Função para exportar os dados do mapa atualmente carregado com array 'data' formatado exatamente como o editor
     function exportLoadedMapDataExactFormat() {
@@ -226,20 +93,6 @@
         // Exibe o JSON completo no console
         console.log(`${pluginName}: Dados do Mapa Carregado (ID ${mapId}, ${mapWidth}x${mapHeight} tiles) no formato JSON exato do Editor:`);
         console.log(manualJsonOutput);
-
-        // Se estiver executando no NW.js (Desktop), salva automaticamente o arquivo no disco
-        if (typeof Utils !== "undefined" && Utils.isNwjs && Utils.isNwjs()) {
-            try {
-                const fs = require("fs");
-                const path = require("path");
-                const fileName = `MapExported_${String(mapId).padStart(3, "0")}.json`;
-                const filePath = path.join("data", fileName);
-                fs.writeFileSync(filePath, manualJsonOutput, "utf8");
-                console.log(`${pluginName}: ✅ Arquivo de mapa exportado salvo automaticamente em: ${filePath}`);
-            } catch (err) {
-                console.warn(`${pluginName}: Não foi possível salvar arquivo diretamente em disco:`, err);
-            }
-        }
 
         console.log(`${pluginName}: JSON do mapa completo gerado no console. Copie este texto e salve-o como um arquivo MapXXX.json.`);
         console.log(`${pluginName}: Lembre-se de renomear o arquivo para o formato MapXXX.json (onde XXX é o ID do mapa) e colocá-lo na pasta data/ do seu projeto RPG Maker MZ.`);

@@ -864,6 +864,15 @@
     const _Spriteset_Map_update = Spriteset_Map.prototype.update;
     Spriteset_Map.prototype.update = function() {
         _Spriteset_Map_update.call(this);
+
+        // Se o Motor 3D estiver ativo, pausa os cálculos de iluminação e sombras 2D na CPU
+        if (typeof Xianxia3DEngine !== "undefined" && typeof Xianxia3DEngine.isActive === "function" && Xianxia3DEngine.isActive()) {
+            if (this._dayNightTileShadowSprite) this._dayNightTileShadowSprite.visible = false;
+            if (this._dayNightOverlaySprite) this._dayNightOverlaySprite.visible = false;
+            if (this._dayNightBloomSprite) this._dayNightBloomSprite.visible = false;
+            return;
+        }
+
         this.updateDayNightTileShadows();
         this.updateDayNightLighting();
     };
@@ -1358,6 +1367,14 @@
             });
         }
 
+        // 3. Luzes Dinâmicas de Reinos Secretos Abertos (Dongtian) e Fendas Espaciais do OverworldChunkManager
+        if (globalThis.OverworldChunkManager && typeof globalThis.OverworldChunkManager.getActiveWorldLightSources === "function") {
+            const worldLights = globalThis.OverworldChunkManager.getActiveWorldLightSources(timeTick);
+            for (let i = 0; i < worldLights.length; i++) {
+                sources.push(worldLights[i]);
+            }
+        }
+
         this._activeLightSources = sources;
         return sources;
     };
@@ -1396,6 +1413,22 @@
         const sources = this.collectActiveLightSources();
         const w = this._dayNightOverlayBitmap.width;
         const h = this._dayNightOverlayBitmap.height;
+
+        // Cache de performance: só redesenha se o minuto mudou ou se o jogador se moveu com fontes ativas
+        const px = $gamePlayer ? $gamePlayer.x : 0;
+        const py = $gamePlayer ? $gamePlayer.y : 0;
+        if (this._lastDnsMinutes === totalMinutes &&
+            this._lastDnsSourcesLen === sources.length &&
+            this._lastDnsPlayerX === px &&
+            this._lastDnsPlayerY === py &&
+            fixedDarkness === null &&
+            this._dayNightOverlaySprite.visible) {
+            return;
+        }
+        this._lastDnsMinutes = totalMinutes;
+        this._lastDnsSourcesLen = sources.length;
+        this._lastDnsPlayerX = px;
+        this._lastDnsPlayerY = py;
 
         // --- Camada 1: Ambiência, Vinheta e Recortes Suaves de Luz ---
         const ctx = this._dayNightOverlayBitmap.context;
@@ -1703,9 +1736,20 @@
     };
 
     // Guard seguro contra falha de textura nula no PIXI durante destruição de cena
+    const _Sprite_onBitmapChange = Sprite.prototype._onBitmapChange;
+    Sprite.prototype._onBitmapChange = function() {
+        if (this._destroyed || !this.texture) {
+            this._refreshFrame = false;
+            return;
+        }
+        _Sprite_onBitmapChange.call(this);
+    };
+
     const _Sprite_destroy = Sprite.prototype.destroy;
     Sprite.prototype.destroy = function(options) {
+        if (this._destroyed) return;
         if (!this._texture) {
+            this._destroyed = true;
             if (this.children && this.children.length > 0) {
                 const children = this.children.slice();
                 for (const child of children) {
@@ -1723,17 +1767,18 @@
             if (this._sunShadowSprite.parent) {
                 this._sunShadowSprite.parent.removeChild(this._sunShadowSprite);
             }
-            this._sunShadowSprite.bitmap = null;
-            this._sunShadowSprite.destroy();
+            if (!this._sunShadowSprite._destroyed) {
+                this._sunShadowSprite.destroy();
+            }
             this._sunShadowSprite = null;
         }
         if (this._contactShadowSprite) {
             if (this._contactShadowSprite.parent) {
                 this._contactShadowSprite.parent.removeChild(this._contactShadowSprite);
             }
-            // Não destrói o bitmap compartilhado _sharedContactOvalBitmap
-            this._contactShadowSprite.bitmap = null;
-            this._contactShadowSprite.destroy();
+            if (!this._contactShadowSprite._destroyed) {
+                this._contactShadowSprite.destroy();
+            }
             this._contactShadowSprite = null;
         }
         _Sprite_Character_destroy.call(this, options);
